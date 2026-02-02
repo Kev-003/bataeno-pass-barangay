@@ -4,7 +4,7 @@ This guide will assist you in beginning the contribution process. We adhere to s
 
 ## Table of contents
 
-- [Contributing to hris-web](#contributing-to-hris-web)
+- [Contributing to hris-web](#contributing-to-bataeno-pass-barangay)
   - [Table of contents](#table-of-contents)
   - [How to contribute](#how-to-contribute)
   - [Branching rules](#branching-rules)
