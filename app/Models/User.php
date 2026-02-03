@@ -18,9 +18,22 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'suffix',
+        'family_id',
+        'date_of_birth',
+        'place_of_birth',
+        'gender',
+        'civil_status',
+        'blood_type',
+        'occupation',
+        'registered_at',
         'email',
+        'email_verified_at',
         'password',
+        'remember_token',
     ];
 
     /**
@@ -42,4 +55,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function family()
+    {
+        return $this->belongsTo(Family::class);
+    }
 }

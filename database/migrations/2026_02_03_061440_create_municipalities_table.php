@@ -10,14 +10,13 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
-        Schema::create('barangays', function (Blueprint $table) {
+        Schema::create('municipalities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('municipality_id')->constrained('municipalities')->cascadeOnDelete();
-            $table->string('name');
+            $table->string('name')->unique();
+            $table->integer('district');
+            $table->string('zip_code', 4);
             $table->timestamps();
         });
-        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -25,6 +24,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('barangays');
+        Schema::dropIfExists('municipalities');
     }
 };
