@@ -114,7 +114,7 @@ class TestRelationships extends Command
             $this->comment("Student found: {$student->first_name} {$student->last_name}");
 
             // Get profiles
-            $profiles = \App\Models\HouseholdMemberProfile::where('user_id', $student->id)->orderBy('id')->get();
+            $profiles = HouseholdMemberProfile::where('user_id', $student->id)->orderBy('id')->get();
             $this->line(" - Total Household Profiles: " . $profiles->count());
 
             foreach ($profiles as $p) {
