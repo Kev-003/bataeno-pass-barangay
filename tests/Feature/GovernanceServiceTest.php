@@ -179,4 +179,6 @@ class GovernanceServiceTest extends TestCase
         // Captain of A cannot sign Transaction of B
         $this->assertFalse($service->canSign($user, $transaction->id));
     }
+
+
 }
