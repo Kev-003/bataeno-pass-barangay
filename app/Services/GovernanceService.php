@@ -4,41 +4,44 @@ namespace App\Services;
 
 use App\Models\BarangayTerm;
 use App\Models\User;
+use App\Models\DocumentTransaction;
 
 class GovernanceService
 {
     /**
      * Check if a user has authority to sign a specific document type.
      */
-    public function canSign($user, $documentTypeCode)
+    public function canSign($user, $transactionId)
     {
-        // Your logic here:
-        // 1. Get user's active term
-        // 2. If Captain -> true
-        // 3. If delegated -> true
+        if (!$user instanceof User)
+            return false;
 
-        if (is_numeric($user) && is_numeric($documentTypeCode)) {
-            $user = User::find($user);
-        }
+        // Load transaction with the property (using the now-fixed relationship name)
+        $transaction = DocumentTransaction::with('documentTypeProperty')->find($transactionId);
 
-        if (!$user instanceof User) {
+        if (!$transaction || !$transaction->documentTypeProperty) {
             return false;
         }
 
-        // Replace the activeTerm logic here:
+        // 1. Jurisdictional Check
+        // Compare User's active barangay against the transaction's specific barangay_id
+        if ($user->getActiveBarangayId() !== $transaction->barangay_id) {
+            return false;
+        }
+
+        // 2. Official Authority Check
         $activeTerm = $user->activeTerm;
-
-        if (!$activeTerm) {
+        if (!$activeTerm)
             return false;
-        }
 
-        // Logic: Captains bypass delegation; others check delegation
-        if ($activeTerm->position_type === 'Captain' || $this->isDelegated($user, $documentTypeCode)) {
+        // 3. Captain Override
+        if ($activeTerm->position_type === 'Captain') {
             return true;
         }
 
-        return false;
-
+        // 4. Delegation Check
+        // We pass the document_type_id (Integer) to match the database column
+        return $this->isDelegated($user, $transaction->document_type_id);
     }
 
     public function isDelegated($user, $documentTypeCode)

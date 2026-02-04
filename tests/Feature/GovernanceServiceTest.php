@@ -3,22 +3,49 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
+use App\Models\Barangay;
 use App\Models\BarangayTerm;
 use App\Models\Delegation;
+use App\Models\DocumentTypeProperty;
+use App\Models\DocumentTransaction;
 use App\Services\GovernanceService;
+
 class GovernanceServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
-     * A basic feature test example.
+     * Helper to set up a valid transaction for a specific barangay.
      */
+    private function createTransactionForBarangay($barangayId, $docCode = 'BC')
+    {
+        // Create the "Rulebook" for the document
+        $property = DocumentTypeProperty::create([
+            'code' => $docCode,
+            'name' => 'Barangay Clearance',
+            'description' => 'Official clearance document',
+            'default_fee' => 50.00,
+            'validity_days' => 30
+        ]);
+
+        // Create the actual "Request"
+        return DocumentTransaction::create([
+            'document_type_id' => $property->id, // Fixed: connects to the property
+            'barangay_id' => $barangayId,   // Fixed: transaction owns the location
+            'status' => 'pending',
+            'request_origin' => 'web',
+            'requester_id' => User::factory()->create()->id,
+            'checksum' => bin2hex(random_bytes(16)),
+        ]);
+    }
+
     public function test_captain_has_automatic_authority()
     {
-        $barangay = \App\Models\Barangay::factory()->create();
-        // 1. Arrange: Create a Captain
+        $barangay = Barangay::factory()->create();
         $user = User::factory()->create();
+
         BarangayTerm::create([
             'user_id' => $user->id,
             'position_type' => 'Captain',
@@ -27,20 +54,19 @@ class GovernanceServiceTest extends TestCase
             'ended_at' => now()->addYear(),
         ]);
 
-        // 2. Act: Call the Service
-        $service = new GovernanceService();
-        $canSign = $service->canSign($user, 1);
+        $transaction = $this->createTransactionForBarangay($barangay->id);
+        $user->refresh();
 
-        // 3. Assert: Expect true
-        $this->assertTrue($canSign);
+        $service = new GovernanceService();
+        $this->assertTrue($service->canSign($user, $transaction->id));
     }
 
     public function test_delegated_official_can_sign()
     {
-        $barangay = \App\Models\Barangay::factory()->create();
-
-        // 1. Create the Granter (Captain) - required by foreign key
+        $barangay = Barangay::factory()->create();
         $captain = User::factory()->create();
+        $secretary = User::factory()->create();
+
         $granterTerm = BarangayTerm::create([
             'user_id' => $captain->id,
             'position_type' => 'Captain',
@@ -49,8 +75,6 @@ class GovernanceServiceTest extends TestCase
             'ended_at' => now()->addYear(),
         ]);
 
-        // 2. Create the Delegate (Secretary)
-        $secretary = User::factory()->create();
         $delegateTerm = BarangayTerm::create([
             'user_id' => $secretary->id,
             'position_type' => 'Secretary',
@@ -59,33 +83,28 @@ class GovernanceServiceTest extends TestCase
             'ended_at' => now()->addYear(),
         ]);
 
-        // 3. Create the Delegation with valid Foreign Keys
+        $transaction = $this->createTransactionForBarangay($barangay->id, 'BC');
+
         Delegation::create([
             'delegate_term_id' => $delegateTerm->id,
-            'document_type_id' => 1,
-            'granter_term_id' => $granterTerm->id, // Real ID, not 999
+            'document_type_id' => $transaction->document_type_id,
+            'granter_term_id' => $granterTerm->id,
             'expires_at' => now()->addMonth(),
         ]);
 
+        $secretary->refresh();
         $service = new GovernanceService();
-        $canSign = $service->isDelegated($secretary, 1);
 
-        $this->assertTrue($canSign);
+        // Testing the full integration via canSign
+        $this->assertTrue($service->canSign($secretary, $transaction->id));
     }
 
     public function test_expired_delegation_cannot_sign()
     {
-        $barangay = \App\Models\Barangay::factory()->create();
-
-        // 1. Arrange: Create Document Type
-        // Note: Using 1 to match your updated test IDs
-        // \App\Models\DocumentTypeProperty::firstOrCreate([
-        //     'id' => 1,
-        //     'name' => 'Barangay Clearance',
-        //     'code' => 'BC'
-        // ]);
-
+        $barangay = Barangay::factory()->create();
         $captain = User::factory()->create();
+        $secretary = User::factory()->create();
+
         $granterTerm = BarangayTerm::create([
             'user_id' => $captain->id,
             'position_type' => 'Captain',
@@ -94,8 +113,6 @@ class GovernanceServiceTest extends TestCase
             'ended_at' => now()->addYear(),
         ]);
 
-        // 2. Create Secretary with an ACTIVE term
-        $secretary = User::factory()->create();
         $delegateTerm = BarangayTerm::create([
             'user_id' => $secretary->id,
             'position_type' => 'Secretary',
@@ -104,41 +121,62 @@ class GovernanceServiceTest extends TestCase
             'ended_at' => now()->addYear(),
         ]);
 
-        // 3. Create an EXPIRED delegation
+        $transaction = $this->createTransactionForBarangay($barangay->id, 'BC');
+
         Delegation::create([
             'delegate_term_id' => $delegateTerm->id,
-            'document_type_id' => 1,
+            'document_type_id' => $transaction->document_type_id,
             'granter_term_id' => $granterTerm->id,
-            'expires_at' => now()->subDay(), // Expired yesterday
+            'expires_at' => now()->subDay(),
         ]);
 
+        $secretary->refresh();
         $service = new GovernanceService();
 
-        // 4. Act: Check delegation
-        $canSign = $service->isDelegated($secretary, 1);
-
-        // 5. Assert: Should be false because the delegation specifically has expired
-        $this->assertFalse($canSign);
+        $this->assertFalse($service->canSign($secretary, $transaction->id));
     }
 
     public function test_captain_term_expired()
     {
-        $barangay = \App\Models\Barangay::factory()->create();
-        // 1. Arrange: Create a Captain
+        $barangay = Barangay::factory()->create();
         $user = User::factory()->create();
+
         BarangayTerm::create([
             'user_id' => $user->id,
             'position_type' => 'Captain',
             'barangay_id' => $barangay->id,
             'started_at' => now()->subYear(),
-            'ended_at' < now()->subDay(),
+            'ended_at' => now()->subDay(), // Expired
         ]);
 
-        // 2. Act: Call the Service
-        $service = new GovernanceService();
-        $canSign = $service->canSign($user, 1);
+        $transaction = $this->createTransactionForBarangay($barangay->id);
+        $user->refresh();
 
-        // 3. Assert: Expect false
-        $this->assertFalse($canSign);
+        $service = new GovernanceService();
+        $this->assertFalse($service->canSign($user, $transaction->id));
+    }
+
+    public function test_official_signing_for_different_barangay()
+    {
+        $barangayA = Barangay::factory()->create();
+        $barangayB = Barangay::factory()->create();
+
+        $user = User::factory()->create();
+        BarangayTerm::create([
+            'user_id' => $user->id,
+            'position_type' => 'Captain',
+            'barangay_id' => $barangayA->id,
+            'started_at' => now()->subYear(),
+            'ended_at' => now()->addYear(),
+        ]);
+
+        // Transaction belongs to Barangay B
+        $transaction = $this->createTransactionForBarangay($barangayB->id);
+        $user->refresh();
+
+        $service = new GovernanceService();
+
+        // Captain of A cannot sign Transaction of B
+        $this->assertFalse($service->canSign($user, $transaction->id));
     }
 }
