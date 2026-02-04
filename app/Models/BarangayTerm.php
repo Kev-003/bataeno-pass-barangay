@@ -18,6 +18,11 @@ class BarangayTerm extends Model
         'ended_at'
     ];
 
+    protected $casts = [
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
+    ];
+
     public function barangay()
     {
         return $this->belongsTo(Barangay::class);
