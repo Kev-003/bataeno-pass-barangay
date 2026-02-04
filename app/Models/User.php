@@ -60,4 +60,15 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Family::class);
     }
+
+    public function activeTerm()
+    {
+        return $this->hasOne(BarangayTerm::class, 'user_id')
+            ->where('ended_at', '>=', now());
+    }
+
+    public function isOfficial()
+    {
+        return $this->activeTerm()->exists();
+    }
 }
