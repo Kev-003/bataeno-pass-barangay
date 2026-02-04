@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserBelongsToBarangay::class])->group(function () {
+
+    // The Request Endpoint
+    Route::post('/barangay/{barangay_id}/documents/request', [DocumentController::class, 'request']);
+
+    // The Sign Endpoint
+    Route::patch('/barangay/{barangay_id}/documents/{transaction_id}/sign', [DocumentController::class, 'sign']);
+
 });
