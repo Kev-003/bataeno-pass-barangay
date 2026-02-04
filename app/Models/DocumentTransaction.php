@@ -33,7 +33,7 @@ class DocumentTransaction extends Model
         return $this->belongsTo(BarangayTerm::class, 'on_behalf_of');
     }
 
-    public function documentType()
+    public function documentTypeProperty()
     {
         return $this->belongsTo(DocumentTypeProperty::class, 'document_type_id');
     }
