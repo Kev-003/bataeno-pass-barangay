@@ -16,6 +16,7 @@ class DocumentController extends Controller
         $validated = $request->validate([
             'document_type_id' => 'required|exists:document_type_properties,id',
             'request_origin' => 'required|string',
+            'requester_id' => 'nullable|exists:users,id', // Allow officials to specify requester for walk-ins
         ]);
 
         // Rule Integration Check
@@ -29,10 +30,15 @@ class DocumentController extends Controller
             ], 422);
         }
 
+        // Determine the requester
+        // If requester_id is provided (walk-in scenario), use it
+        // Otherwise, use the authenticated user (self-service)
+        $requesterId = $validated['requester_id'] ?? auth()->id();
+
         // Create Transaction
         // We rely on the User model to set the correct Barangay ID context.
         $transaction = DocumentTransaction::create([
-            'requester_id' => auth()->id(),
+            'requester_id' => $requesterId,
             'barangay_id' => auth()->user()->getActiveBarangayId(),
             'document_type_id' => $validated['document_type_id'],
             'request_origin' => $validated['request_origin'],
