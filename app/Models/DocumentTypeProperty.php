@@ -21,7 +21,7 @@ class DocumentTypeProperty extends Model
     {
         return $this->belongsToMany(
             DocumentRequirementsDefinition::class,
-            'documents_rules',
+            'document_rules',
             'document_type_id',
             'requirement_id'
         );
