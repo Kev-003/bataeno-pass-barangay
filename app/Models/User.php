@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->belongsTo(Family::class);
     }
 
+    public function householdMemberProfiles()
+    {
+        return $this->hasMany(HouseholdMemberProfile::class, 'user_id');
+    }
+
     public function activeTerm()
     {
         return $this->hasOne(BarangayTerm::class, 'user_id')
@@ -70,5 +75,46 @@ class User extends Authenticatable
     public function isOfficial()
     {
         return $this->activeTerm()->exists();
+    }
+
+    public function getActiveBarangayIds(): array
+    {
+        // 1. Get IDs from Household memberships (Crawl: Profile -> Household -> House)
+        $householdBarangayIds = $this->householdMemberProfiles()
+            ->whereNull('ended_at')
+            ->with('household.house') // Eager load to avoid N+1 and handle the "crawl"
+            ->orderByRaw("CASE 
+            WHEN membership_type = 'primary' THEN 1 
+            WHEN membership_type = 'transient' THEN 2 
+            WHEN membership_type = 'associate' THEN 3 
+            ELSE 4 END ASC")
+            ->get()
+            ->map(fn($profile) => $profile->household?->house?->barangay_id)
+            ->filter();
+
+        // 2. Get ID from Official Term
+        $termBarangayId = $this->activeTerm?->barangay_id;
+
+        // 3. Merge, unique, and reset keys
+        return collect([$termBarangayId])
+            ->concat($householdBarangayIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Returns the primary active Barangay ID.
+     */
+    public function getActiveBarangayId()
+    {
+        // Priority 1: Official Seat
+        if ($this->activeTerm) {
+            return $this->activeTerm->barangay_id;
+        }
+
+        // Priority 2: Primary Residence (First active household found)
+        return $this->getActiveBarangayIds()[0] ?? null;
     }
 }
