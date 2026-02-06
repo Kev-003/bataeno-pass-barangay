@@ -31,4 +31,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'bataeno' => [
+        'client_id' => env('BATAENO_PASS_CLIENT_ID'),
+        'client_secret' => env('BATAENO_PASS_CLIENT_SECRET'),
+        'redirect' => env('BATAENO_REDIRECT_URI'),
+        'base_url' => 'https://bataeno-pass.bataan.gov.ph',
+    ],
+
 ];
