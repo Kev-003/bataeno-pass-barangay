@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Services\GovernanceService;
 use App\Models\DocumentTransaction;
 use App\Models\DocumentTypeProperty;
+use App\Models\Barangay;
 use Illuminate\Support\Facades\DB;
 
 class DocumentController extends Controller
@@ -39,7 +40,7 @@ class DocumentController extends Controller
         // We rely on the User model to set the correct Barangay ID context.
         $transaction = DocumentTransaction::create([
             'requester_id' => $requesterId,
-            'barangay_id' => auth()->user()->getActiveBarangayId(),
+            'barangay_code' => Barangay::where('barangay_code', Barangay::normalizeCode(auth()->user()->barangay_code))->value('id'),
             'document_type_id' => $validated['document_type_id'],
             'request_origin' => $validated['request_origin'],
             'status' => 'pending',
@@ -52,15 +53,18 @@ class DocumentController extends Controller
         ], 201);
     }
 
-    public function sign(Request $request, $barangay_id, $id, GovernanceService $service)
+    public function sign(Request $request, $barangay_code, $id, GovernanceService $service)
     {
-        return DB::transaction(function () use ($request, $barangay_id, $id, $service) {
+        return DB::transaction(function () use ($request, $barangay_code, $id, $service) {
             $user = $request->user();
+
+            // Resolve Barangay ID from PSGC code (normalize to 9rd-digit if needed)
+            $barangayId = Barangay::where('barangay_code', Barangay::normalizeCode($barangay_code))->value('id');
 
             // Fetch with a Row Lock
             // This prevents other requests from reading/modifying this specific row 
             // until this transaction completes.
-            $transaction = DocumentTransaction::where('barangay_id', $barangay_id)
+            $transaction = DocumentTransaction::where('barangay_code', $barangayId)
                 ->lockForUpdate()
                 ->findOrFail($id);
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DocumentTypeProperty;
 
 class DocumentTransaction extends Model
 {
@@ -19,7 +20,8 @@ class DocumentTransaction extends Model
         'status',
         'request_origin',
         'requester_id',
-        'barangay_id',
+        'barangay_code',
+        'purpose',
         'checksum'
     ];
 
@@ -45,6 +47,31 @@ class DocumentTransaction extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class);
+        return $this->belongsTo(Barangay::class, 'barangay_code');
     }
+
+    public function documentType()
+    {
+        return $this->documentTypeProperty();
+    }
+
+    /**
+     * Fetch the dynamic model instance associated with this transaction.
+     */
+    public function getSpecificDetails()
+    {
+        $modelClass = $this->documentTypeProperty->doc_type_model;
+
+        if (!str_contains($modelClass, '\\')) {
+            $modelClass = "App\\Models\\{$modelClass}";
+        }
+
+        if (class_exists($modelClass)) {
+            return $modelClass::where('transaction_id', $this->id)->first();
+        }
+
+        return null;
+    }
+
+
 }

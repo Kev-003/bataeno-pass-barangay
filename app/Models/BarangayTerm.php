@@ -5,15 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Barangay;
+use Spatie\Permission\Contracts\Role;
 
 class BarangayTerm extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'barangay_id',
         'user_id',
-        'position_type',
+        'barangay_code',
+        'position_id',
         'started_at',
         'ended_at'
     ];
@@ -25,12 +26,25 @@ class BarangayTerm extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class);
+        return $this->belongsTo(Barangay::class, 'barangay_code');
     }
 
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function position()
+    {
+        return $this->hasOne(Role::class, 'id', 'position_id');
+    }
+
+    /**
+     * Accessor for name to delegate to the linked User.
+     */
+    public function getNameAttribute()
+    {
+        return $this->user->name;
     }
 
 }

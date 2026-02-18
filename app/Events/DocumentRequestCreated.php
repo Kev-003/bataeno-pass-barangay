@@ -33,7 +33,7 @@ class DocumentRequestCreated
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('document-request-created.' . $this->transaction->barangay_id),
+            new PrivateChannel('document-request-created.' . $this->transaction->barangay_code),
         ];
     }
 }

@@ -21,7 +21,7 @@ class GovernanceService
         // 2. Jurisdictional Check
         // We trust the User model to tell us where this user belongs.
         // If the Official is from Barangay A, they cannot sign for Barangay B.
-        if ($user->getActiveBarangayId() !== $transaction->barangay_id) {
+        if ($user->getActiveBarangayId() !== $transaction->barangay_code) {
             return false;
         }
 

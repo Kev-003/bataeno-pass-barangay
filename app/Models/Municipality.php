@@ -13,6 +13,11 @@ class Municipality extends Model
         'name',
         'district',
         'zip_code',
+        'municity_code',
+        'province_code',
+        'province_name',
+        'region_code',
+        'region_name',
     ];
 
     public function barangays()

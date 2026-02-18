@@ -95,6 +95,9 @@
                                 <span wire:loading.remove>Submit Request</span>
                                 <span wire:loading>Processing...</span>
                             </button>
+                            @error('submission')
+                                <div class="mt-2 text-red-500 text-xs text-center">{{ $message }}</div>
+                            @enderror
                         @endif
                     </div>
                 </div>

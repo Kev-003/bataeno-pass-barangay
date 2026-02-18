@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\DocumentRequestReceived;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use App\Models\Barangay;
 
 class DocumentRequestService
 {
@@ -16,7 +17,7 @@ class DocumentRequestService
 
             $transaction = DocumentTransaction::create([
                 'requester_id' => $user->id,
-                'barangay_id' => $user->barangay_code,
+                'barangay_code' => Barangay::where('barangay_code', Barangay::normalizeCode($user->barangay_code))->value('id'),
                 'document_type_id' => $docTypeId,
                 'purpose' => $purpose,
                 'status' => 'pending',
@@ -35,7 +36,7 @@ class DocumentRequestService
 
     protected function notifyOfficials($transaction)
     {
-        $officials = User::officialsForBarangay($transaction->barangay_id)->get();
+        $officials = User::officialsForBarangay($transaction->barangay_code)->get();
 
         if ($officials->count() > 0) {
             Notification::send($officials, new DocumentRequestReceived($transaction));
