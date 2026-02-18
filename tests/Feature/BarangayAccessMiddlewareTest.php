@@ -25,7 +25,7 @@ class BarangayAccessMiddlewareTest extends TestCase
 
         // Define a temporary route to test the middleware
         Route::middleware(['web', \App\Http\Middleware\EnsureUserBelongsToBarangay::class])
-            ->get('/test-barangay/{barangay_id}', function () {
+            ->get('/test-barangay/{barangay_code}', function () {
                 return 'Access Granted';
             });
     }
@@ -35,7 +35,7 @@ class BarangayAccessMiddlewareTest extends TestCase
         $barangay = Barangay::factory()->create();
 
         $house = House::create([
-            'barangay_id' => $barangay->id,
+            'barangay_cid' => $barangay->id,
             'housing_unit' => 'Unit A',
             'street' => 'Main St',
             'subdivision' => 'Phase 1',
