@@ -68,6 +68,11 @@ class DocumentRequestForm extends Component
         // 2. Prepare Dynamic Fields (BUT DON'T SHOW THEM YET)
         $modelClass = $this->selectedDocMetadata->doc_type_model;
 
+        // Ensure fully qualified class name
+        if (!str_contains($modelClass, '\\')) {
+            $modelClass = "App\\Models\\{$modelClass}";
+        }
+
         if (class_exists($modelClass)) {
             $instance = new $modelClass;
             $columns = Schema::getColumnListing($instance->getTable());
