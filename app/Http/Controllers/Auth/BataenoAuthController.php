@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use App\Models\User;
+use App\Models\Barangay;
 use Illuminate\Support\Facades\Auth;
 
 class BataenoAuthController extends Controller
@@ -115,38 +116,50 @@ class BataenoAuthController extends Controller
         $govUserData = $userResponse->json();
 
         // dd($govUserData);
-        $user = User::updateOrCreate(
-            ['email' => $govUserData['data']['email']],
-            [
-                'uuid' => $govUserData['data']['uuid'] ?? null,
-                // Identity
-                'first_name' => $govUserData['data']['first_name'] ?? null,
-                'middle_name' => $govUserData['data']['middle_name'] ?? null,
-                'last_name' => $govUserData['data']['last_name'] ?? null,
-                'suffix' => $govUserData['data']['ext_name'] ?? null, // Mapping ext_name to suffix
+        $user = User::firstOrNew(['email' => $govUserData['data']['email']]);
 
-                // Profile Details
-                'date_of_birth' => $govUserData['data']['birthday'] ?? null,
-                'place_of_birth' => $govUserData['data']['birth_place'] ?? null,
-                'gender' => $govUserData['data']['sex'] ?? null,
-                'civil_status' => $govUserData['data']['civil_status'] ?? null,
+        $user->fill([
+            'uuid' => $govUserData['data']['uuid'] ?? null,
+            // Identity
+            'first_name' => $govUserData['data']['first_name'] ?? null,
+            'middle_name' => $govUserData['data']['middle_name'] ?? null,
+            'last_name' => $govUserData['data']['last_name'] ?? null,
+            'suffix' => $govUserData['data']['ext_name'] ?? null,
 
-                // Location Codes
-                'municity_code' => $govUserData['data']['municity_code'] ?? null,
-                'barangay_code' => $govUserData['data']['barangay_code'] ?? null,
+            // Profile Details
+            'date_of_birth' => $govUserData['data']['birthday'] ?? null,
+            'place_of_birth' => $govUserData['data']['birth_place'] ?? null,
+            'gender' => $govUserData['data']['sex'] ?? null,
+            'civil_status' => $govUserData['data']['civil_status'] ?? null,
 
-                // Custom Fields (Add these to your migration/fillable)
-                'municity_name' => $govUserData['data']['municity_name'] ?? null,
-                'barangay_name' => $govUserData['data']['barangay_name'] ?? null,
+            // Location Codes
+            'municity_code' => Barangay::normalizeCode($govUserData['data']['municity_code'] ?? null),
+            'barangay_code' => Barangay::normalizeCode($govUserData['data']['barangay_code'] ?? null),
 
-                // System Requirements
-                'password' => $user->password ?? bcrypt(\Illuminate\Support\Str::random(16)),
-                'registered_at' => $user->registered_at ?? now(),
-            ]
-        );
+            // Custom Fields
+            'municity_name' => $govUserData['data']['municity_name'] ?? null,
+            'barangay_name' => $govUserData['data']['barangay_name'] ?? null,
+
+            'egov_data' => $govUserData['data']['identities'] ?? $govUserData['data'] ?? null,
+        ]);
+
+        if (!$user->exists) {
+            $user->password = bcrypt(\Illuminate\Support\Str::random(16));
+            $user->registered_at = now();
+        }
+
+        $user->save();
 
         Auth::login($user);
 
-        return redirect()->route('resident.dashboard');
+        if ($user->isAdmin()) {
+            return redirect('/admin');
+        }
+
+        if ($user->isOfficial()) {
+            return redirect('/official/' . $user->barangay_code);
+        }
+
+        return redirect('/dashboard');
     }
 }
