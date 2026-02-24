@@ -24,7 +24,7 @@
                     @if($step === 2)
                         <div wire:key="step-2" class="animate-in fade-in slide-in-from-right-8">
                             <div class="bg-blue-50 p-4 rounded-xl mb-6">
-                                <h4 class="font-bold text-blue-900">{{ $selectedDocMetadata->name ?? 'Document' }}</h4>
+                                <h4 class="font-bold text-blue-900">{{ $selectedDocMetadata['name'] ?? 'Document' }}</h4>
                                 <p class="text-xs text-blue-700">Please state your purpose.</p>
                             </div>
 

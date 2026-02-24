@@ -11,6 +11,7 @@ use App\Notifications\DocumentRequestReceived;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Broadcast;
 
 class DocumentRequestController extends Controller
 {
@@ -25,15 +26,18 @@ class DocumentRequestController extends Controller
 
         $metadata = DB::table('document_type_properties')->find($validated['document_type']);
 
-        $service->createRequest(
-            user: auth()->user(),                       // The Resident
-            docTypeId: $validated['document_type'],     // The ID from the form
-            modelClass: $metadata->doc_type_model,      // Extracted from the DB lookup
-            purpose: $validated['purpose'],             // The "Why"
-            dynamicFields: $request->input('dynamic_fields') // The "Answers"
+        $transaction = $service->createRequest(
+            user: auth()->user(),
+            docTypeId: $validated['document_type'],
+            modelClass: $metadata->doc_type_model,
+            purpose: $validated['purpose'],
+            dynamicFields: $request->input('dynamic_fields')
         );
 
-        // $user->notify(new RequestSubmittedConfirmation($transaction));
+        // Notify barangay officials in real-time via Reverb
+        if ($transaction) {
+            DocumentRequestCreated::dispatch($transaction);
+        }
 
         return redirect()->route('dashboard')
             ->with('success', 'Your request has been submitted to your Barangay.');

@@ -17,11 +17,16 @@
     <x-sidebar-layout :navItems="$navItems" defaultTab="residents">
         <div class="bg-white rounded-lg shadow-sm overflow-hidden">
             <div x-show="activeTab === 'residents'">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-900">Residents</h2>
-                    <p class="text-sm text-gray-500 mt-1">Manage residents in {{ $barangay_code }}</p>
+                <div class="flex justify-between px-6 py-4 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Residents</h2>
+                        <p class="text-sm text-gray-500 mt-1">Manage residents in {{ $barangay_code }}</p>
+                    </div>
+                    <a
+                        class="px-4 py-2 bg-blue-600 text-white mb-6 text-sm font-medium rounded-md hover:bg-blue-700 transition">
+                        Register Resident
+                    </a>
                 </div>
-
                 <div class="p-6">
                     {{ $this->table }}
                 </div>

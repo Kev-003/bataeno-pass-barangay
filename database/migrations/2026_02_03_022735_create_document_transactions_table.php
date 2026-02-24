@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->foreignId('requester_id')->constrained('users');
             $table->bigInteger('barangay_code'); // point to user's barangay_code (jurisdiction)
             $table->text('purpose')->nullable();
+            $table->string('file_path')->nullable();
             $table->char('checksum', 64)->nullable()->unique(); // SHA-256
             $table->timestamps();
         });

@@ -13,7 +13,6 @@ class Delegation extends Model
     protected $fillable = [
         'granter_term_id',
         'delegate_term_id',
-        'document_type_id',
         'expires_at'
     ];
 
@@ -25,10 +24,5 @@ class Delegation extends Model
     public function delegateTerm()
     {
         return $this->belongsTo(BarangayTerm::class, 'delegate_term_id');
-    }
-
-    public function documentType()
-    {
-        return $this->belongsTo(DocumentTypeProperty::class, 'document_type_id');
     }
 }

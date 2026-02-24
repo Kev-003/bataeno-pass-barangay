@@ -38,23 +38,18 @@
                                     <small class="text-gray-500">{{ $transaction->created_at->diffForHumans() }}</small>
                                     <span
                                         class="px-2 py-0.5 rounded text-[10px] uppercase font-bold 
-                                                        {{ $transaction->status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700' }}">
+                                                                {{ $transaction->status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700' }}">
                                         {{ $transaction->status }}
                                     </span>
                                 </div>
                             </div>
 
                             <div class="flex gap-2">
-                                @if($transaction->status === 'pending')
-                                    <button wire:click="processRequest({{ $transaction->id }})"
-                                        class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition">
-                                        Approve/Process
-                                    </button>
-                                @endif
-                                <button
+                                <a href="{{ route('official.document-approval-process', ['barangay_code' => $psgc_code, 'id' => $transaction->id]) }}"
+                                    wire:navigate
                                     class="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition">
                                     Details
-                                </button>
+                                </a>
                             </div>
                         </div>
                     @empty

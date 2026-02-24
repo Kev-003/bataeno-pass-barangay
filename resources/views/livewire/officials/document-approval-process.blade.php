@@ -4,10 +4,6 @@
             'label' => 'Pending Requests',
             'icon' => '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
         ],
-        'processing' => [
-            'label' => 'In Processing',
-            'icon' => '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>',
-        ],
         'completed' => [
             'label' => 'Completed',
             'icon' => '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
@@ -51,10 +47,12 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <span
-                            class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold uppercase tracking-wider">
-                            Pending Review
-                        </span>
+                        @if($pendingTransactions && $pendingTransactions->status !== 'issued')
+                            <span
+                                class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold uppercase tracking-wider">
+                                Pending Review
+                            </span>
+                        @endif
                     </div>
                 </div>
 
@@ -128,24 +126,30 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="mt-12 flex justify-end gap-4 p-6 bg-slate-50 -m-8 mt-8 border-t">
-                    <button wire:click="approve"
-                        class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition active:scale-95 flex items-center gap-2">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
-                            </path>
-                        </svg>
-                        Approve & Move to Processing
-                    </button>
-
-                    <button wire:click="approveAndSign" wire:loading.attr="disabled"
-                        class="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700">
-
-                        <span wire:loading.remove>Approve & Sign Document</span>
-                        <span wire:loading>Signing...</span>
-                    </button>
-                </div>
+                @if($pendingTransactions && $pendingTransactions->status !== 'issued')
+                    <div class="mt-12 flex justify-end gap-4 p-6 bg-slate-50 -m-8 mt-8 border-t">
+                        <button wire:click="approveAndSign" wire:loading.attr="disabled"
+                            class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition active:scale-95 flex items-center gap-2">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                                </path>
+                            </svg>
+                            <span wire:loading.remove>Approve & Sign Document</span>
+                            <span wire:loading>Signing...</span>
+                        </button>
+                    </div>
+                @elseif($pendingTransactions && $pendingTransactions->status === 'issued')
+                    <div class="mt-12 flex justify-end p-6 bg-slate-50 -m-8 mt-8 border-t">
+                        <span
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Document Already Issued
+                        </span>
+                    </div>
+                @endif
             </div>
         </div>
     </x-sidebar-layout>

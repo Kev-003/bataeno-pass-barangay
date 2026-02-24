@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Notification;
 use App\Models\DocumentTypeProperty;
 
 use Spatie\Browsershot\Browsershot;
+use App\Events\DocumentIssued;
+use App\Notifications\DocumentIssuedNotification;
 class DocumentApprovalService
 {
     public function getTransactionDetails(DocumentTransaction $transaction)
@@ -39,44 +41,66 @@ class DocumentApprovalService
 
     protected function getBase64Image($filePath)
     {
-        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($filePath)) {
+        // Strip "storage/app/" if it was accidentally passed
+        $cleanPath = str_replace('storage/app/', '', $filePath);
+
+        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($cleanPath)) {
+            // Log this so you can see it in storage/logs/laravel.log
+            \Log::warning("File not found for Base64: " . $cleanPath);
             return null;
         }
 
-        $fileData = \Illuminate\Support\Facades\Storage::disk('local')->get($filePath);
-
-        $mimeType = \Illuminate\Support\Facades\Storage::disk('local')->mimeType($filePath);
+        $fileData = \Illuminate\Support\Facades\Storage::disk('local')->get($cleanPath);
+        $mimeType = \Illuminate\Support\Facades\Storage::disk('local')->mimeType($cleanPath);
 
         return 'data:' . $mimeType . ';base64,' . base64_encode($fileData);
     }
 
     public function generateAndSign(DocumentTransaction $transaction, BarangayTerm $official)
     {
-        // Access the PSGC code via the relationship, since the local column 'barangay_code' stores the ID
-        $psgcCode = $transaction->barangay->barangay_code;
+        // Load Relationships — municipality() FK: barangays.municity_code -> municipalities.id
+        $transaction->load(['barangay.municipality', 'documentType', 'requester']);
 
-        $sealPath = "barangay-assets/{$psgcCode}/seal.png";
+        $barangay = $transaction->barangay;
+        $municipality = $barangay->municipality; // municipalities row
 
-        // Use the PSGC code for the folder path to be consistent with uploads
-        $signaturePath = "barangay-assets/" . $psgcCode . "/signatures/{$official->user_id}.jpg";
+        // Crawl path: barangays.municity_code (int FK) -> municipalities.id -> municipalities.municity_code (PSGC string)
+        $psgcCode = $barangay->barangay_code;
+        $psgcMunicity = $municipality?->municity_code; // The actual PSGC string on the municipalities table
+        \Log::info("Attempting to load Municipal Seal for code: " . $psgcMunicity);
 
-        $sealBase64 = $this->getBase64Image($sealPath);
-        $signatureBase64 = $this->getBase64Image($signaturePath);
 
-        if (!$sealBase64) {
-            throw new \Exception("Official seal not found at path: '{$sealPath}'. Please upload your seal in settings.");
+        // Fetch Signature (Checking multiple formats)
+        $extensions = ['jpg', 'png', 'webp'];
+        $signatureBase64 = null;
+        $foundPath = null;
+
+        foreach ($extensions as $ext) {
+            $testPath = "barangay-assets/{$psgcCode}/signatures/{$official->user_id}.{$ext}";
+            if (\Illuminate\Support\Facades\Storage::disk('local')->exists($testPath)) {
+                $foundPath = $testPath;
+                $signatureBase64 = $this->getBase64Image($testPath);
+                break;
+            }
         }
+
         if (!$signatureBase64) {
-            throw new \Exception("Official signature not found at path: '{$signaturePath}'. Please upload your signature in settings.");
+            throw new \Exception("Official signature not found for ID: {$official->user_id} in formats: " . implode(', ', $extensions));
         }
-
-        // Load required relationships
-        $transaction->load(['barangay.municipalityByCode', 'documentType', 'requester']);
 
         $slug = str($transaction->documentType->name)->slug();
 
-        $barangay = $transaction->barangay;
-        $municipality = $barangay->municipalityByCode;
+        // Fetch Seals (Removed "storage/app/" prefix because disk('local') handles it)
+        $barangaySealBase64 = $this->getBase64Image("barangay-assets/{$psgcCode}/seal.png");
+        $municipalSealBase64 = $this->getBase64Image("municity-assets/{$psgcMunicity}/seal.png");
+        $provincialSealBase64 = $this->getBase64Image("provincial-assets/seal.png");
+
+        $officials = BarangayTerm::where('barangay_code', $barangay->id)
+            ->where(function ($q) {
+                $q->where('ended_at', '>=', now())->orWhereNull('ended_at');
+            })
+            ->with(['user', 'position'])
+            ->get();
 
         $viewData = [
             'transaction' => $transaction,
@@ -84,29 +108,25 @@ class DocumentApprovalService
             'resident' => $transaction->requester,
             'barangay' => $barangay,
             'municipality' => $municipality,
-            'seal' => $sealBase64,           // For template
-            'signature' => $signatureBase64, // For template
-            'barangaySeal' => $sealBase64,  // For layout
-            'citySeal' => $sealBase64,      // Fallback for layout
+            'signature' => $signatureBase64,
+            'barangaySeal' => $barangaySealBase64,
+            'municipalSeal' => $municipalSealBase64,
+            'provincialSeal' => $provincialSealBase64,
+            'citySeal' => $municipalSealBase64,
             'official' => $official,
+            'officials' => $officials,
         ];
-
         // Add helper properties to barangay object for the layout if they don't exist
         $barangay->province = $municipality->province_name ?? 'Bataan';
         $barangay->city = $municipality->name ?? '';
         $barangay->address = "Barangay Hall, {$barangay->name}"; // Default
         $barangay->contact_number = "N/A"; // Default
 
-        // Debug check
-        foreach ($viewData as $key => $value) {
-            if (is_null($value)) {
-                // throw new \Exception("Variable '$key' is null in generateAndSign!");
-            }
-        }
-
         $html = view("livewire.documents.templates.{$slug}", $viewData)->render();
-        $fileName = "generated/{$transaction->barangay_code}/{$transaction->id}_signed.pdf";
-        $fullPath = storage_path("app/{$fileName}");
+
+        $docSlug = str($transaction->documentType->name)->slug();
+        $fileName = "{$transaction->barangay_code}/{$transaction->requester->id}/{$docSlug}/{$transaction->id}_signed.pdf";
+        $fullPath = \Illuminate\Support\Facades\Storage::disk('documents')->path($fileName);
 
         $directory = dirname($fullPath);
         if (!is_dir($directory)) {
@@ -118,12 +138,32 @@ class DocumentApprovalService
             ->showBackground()
             ->save($fullPath);
 
+        $validityDays = $transaction->documentTypeProperty->validity_days;
+        $expiryDate = $validityDays ? now()->addDays($validityDays) : null;
+
+        // Check if authority is delegated
+        $delegation = \App\Models\Delegation::where('delegate_term_id', $official->id)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
         $transaction->update([
             'status' => 'issued',
             'file_path' => $fileName,
             'issued_at' => now(),
+            'expiry_date' => $expiryDate,
             'approver_id' => $official->id,
+
+            //if delegated
+            'on_behalf_of' => $delegation ? $delegation->granter_term_id : $official->id,
         ]);
+
+        // Notify the resident in real-time via Reverb
+        DocumentIssued::dispatch($transaction);
+
+        // Save to notification history
+        $transaction->requester->notify(new DocumentIssuedNotification($transaction));
 
         return $fullPath;
     }
@@ -139,3 +179,14 @@ class DocumentApprovalService
 
 
 }
+
+// protected function notifyUser($transaction)
+// {
+//     $user = User::officialsForBarangay($transaction->barangay_id)->get();
+
+//     if ($user->count() > 0) {
+//         Notification::send($user, new DocumentRequestReceived($transaction));
+//     }
+// }
+
+

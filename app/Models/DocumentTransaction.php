@@ -22,8 +22,24 @@ class DocumentTransaction extends Model
         'requester_id',
         'barangay_code',
         'purpose',
-        'checksum'
+        'checksum',
+        'file_path',
+        'download_token',
+        'issued_at'
     ];
+
+    public function getTemporaryDownloadUrl()
+    {
+        if (!$this->file_path)
+            return null;
+
+        // Generate a fresh token for this specific download attempt
+        $token = \Illuminate\Support\Str::random(32);
+        $this->update(['download_token' => $token]);
+
+        return \Illuminate\Support\Facades\Storage::disk('documents')
+            ->temporaryUrl($this->file_path, now()->addMinutes(5), ['token' => $token]);
+    }
 
     public function approver()
     {
@@ -47,7 +63,7 @@ class DocumentTransaction extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class, 'barangay_code');
+        return $this->belongsTo(Barangay::class, 'barangay_code', 'id');
     }
 
     public function documentType()
@@ -72,6 +88,7 @@ class DocumentTransaction extends Model
 
         return null;
     }
+
 
 
 }

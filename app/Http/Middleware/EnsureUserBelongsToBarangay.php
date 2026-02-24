@@ -38,7 +38,7 @@ class EnsureUserBelongsToBarangay
         }
 
         // 4. Get the target barangay from Route OR Input
-        $targetBarangayCode = $request->route('barangay_code') ?? $request->input('barangay_code');
+        $targetBarangayCode = \App\Models\Barangay::normalizeCode($request->route('barangay_code') ?? $request->input('barangay_code'));
 
         // 5. If specific barangay is not required for this route, just proceed
         if (!$targetBarangayCode) {

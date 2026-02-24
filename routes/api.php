@@ -18,9 +18,9 @@ use App\Http\Controllers\DocumentController;
 Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserBelongsToBarangay::class])->group(function () {
 
     // The Request Endpoint
-    Route::post('/barangay/{barangay_id}/documents/request', [DocumentController::class, 'request']);
+    Route::post('/barangay/{barangay_code}/documents/request', [DocumentController::class, 'request']);
 
     // The Sign Endpoint
-    Route::patch('/barangay/{barangay_id}/documents/{transaction_id}/sign', [DocumentController::class, 'sign']);
+    Route::patch('/barangay/{barangay_code}/documents/{transaction_id}/sign', [DocumentController::class, 'sign']);
 
 });

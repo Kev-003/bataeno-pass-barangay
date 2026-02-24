@@ -40,7 +40,6 @@ return new class extends Migration {
             $table->string('password');
             $table->json('egov_data')->nullable();
 
-            // These were in your Model's fillable list but missing here:
             $table->text('profile_photos')->nullable();
             $table->text('digital_signature')->nullable();
 

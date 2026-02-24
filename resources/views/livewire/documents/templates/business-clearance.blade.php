@@ -3,15 +3,14 @@
 @section('title', 'Business Clearance')
 
 @section('content')
-    {{-- Header with Seal --}}
-    <div class="relative header-section">
-        {{-- Pass the base64 string we prepared in the Service --}}
-        <x-documents.components.seal :image="$seal" />
-        <h1 style="text-decoration: underline; font-size: 20pt;">BARANGAY BUSINESS CLEARANCE</h1>
+    <div class="text-center mb-10">
+        <h1 style="text-decoration: underline; font-size: 16pt; font-family: serif;" class="font-bold">
+            BARANGAY CLEARANCE
+        </h1>
     </div>
 
-    <p style="text-indent: 50px;">
-        <strong>TO WHOM IT MAY CONCERN:</strong>
+    <p class="mb-6 uppercase">
+        <strong>To Whom It May Concern:</strong>
     </p>
 
     <p style="margin-top: 30px;">

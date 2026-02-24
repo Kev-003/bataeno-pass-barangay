@@ -13,13 +13,7 @@ return new class extends Migration {
         Schema::create('clearances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('document_transactions')->cascadeOnDelete();
-            $table->string('gender');
-            $table->string('civil_status');
-            $table->string('housing_unit')->nullable();
-            $table->string('street');
-            $table->string('subdivision')->nullable();
             $table->string('community_tax_id')->nullable();
-            $table->string('purpose');
             $table->timestamps();
         });
     }

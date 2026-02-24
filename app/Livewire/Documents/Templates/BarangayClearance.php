@@ -4,7 +4,7 @@ namespace App\Livewire\Documents\Templates;
 
 use Livewire\Component;
 
-class Clearance extends Component
+class BarangayClearance extends Component
 {
     public function render()
     {

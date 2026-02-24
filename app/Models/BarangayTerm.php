@@ -36,7 +36,7 @@ class BarangayTerm extends Model
 
     public function position()
     {
-        return $this->hasOne(Role::class, 'id', 'position_id');
+        return $this->belongsTo(\Spatie\Permission\Models\Role::class, 'position_id');
     }
 
     /**

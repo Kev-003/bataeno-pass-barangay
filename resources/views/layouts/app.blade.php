@@ -15,10 +15,18 @@
 
 
     <!-- Scripts -->
+    @filamentStyles
+    @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        window.AppConfig = {
+            userId: {{ auth()->id() ?? 'null' }},
+            barangayId: {{ auth()->user()?->getActiveBarangayCode() ?? 'null' }}
+        };
+    </script>
 </head>
 
-<body class="font-sans antialiased">
+<body class="font-sans antialiased border-t-4 border-blue-600">
     <div class="min-h-screen bg-gray-100">
         <livewire:layout.navigation />
 
@@ -36,6 +44,9 @@
             {{ $slot }}
         </main>
     </div>
+
+    @livewireScripts
+    @filamentScripts
 </body>
 
 </html>

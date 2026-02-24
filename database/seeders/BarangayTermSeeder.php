@@ -7,6 +7,7 @@ use App\Models\BarangayTerm;
 use App\Models\Barangay;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
 
 class BarangayTermSeeder extends Seeder
 {
@@ -15,41 +16,77 @@ class BarangayTermSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Get the Captain Role
-        // We use firstOrCreate to ensure it exists if the roles haven't been seeded yet
-        $role = Role::where(['name' => 'Captain', 'guard_name' => 'web'])->first();
+        // 1. Get Roles
+        $captainRole = Role::where('name', 'Captain')->first();
+        $kagawadRole = Role::where('name', 'Kagawad')->first();
+        $secretaryRole = Role::where('name', 'Secretary')->first();
 
-        // 2. Get User ID 1
-        $user = User::find(1);
-
-        if (!$user) {
-            $this->command->error('User with ID 1 not found. Please register or seed a user first.');
+        if (!$captainRole || !$kagawadRole || !$secretaryRole) {
+            $this->command->error('Required roles (Captain, Kagawad, Secretary) not found. Run RolesAndPermissionsSeeder first.');
             return;
         }
 
-        // 3. Get the Barangay to assign the user to
-        // We'll prioritize the barangay the user is already registered in
-        $barangay = Barangay::where('barangay_code', $user->barangay_code)->first() ?? Barangay::first();
+        // 2. Get User ID 1 (The user is the Captain)
+        $captainUser = User::find(1);
+        if (!$captainUser) {
+            $this->command->error('User with ID 1 not found.');
+            return;
+        }
 
+        // 3. Get Santo Domingo Barangay
+        $barangay = Barangay::where('name', 'Santo Domingo')->first();
         if (!$barangay) {
-            $this->command->error('No barangays found. Please run BarangaySeeder first.');
+            $this->command->error('Santo Domingo barangay not found.');
             return;
         }
 
-        // 4. Create the Barangay Term
-        // Note: The 'barangay_code' column in barangay_terms is currently a foreignId
-        // which points to the 'id' of the barangays table in the current migration.
-        BarangayTerm::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'position_id' => $role->id,
-            ],
-            [
-                'barangay_code' => 200,
-                'started_at' => now(),
-            ]
-        );
+        // 4. Assign Captain and Sync User Location
+        // We ensure the user's resident barangay_code matches the 9-digit PSGC in our table
+        $captainUser->update([
+            'barangay_code' => $barangay->barangay_code,
+            'municity_code' => $barangay->municity_code, // This is local ID, sync if needed
+            'barangay_name' => $barangay->name,
+        ]);
 
-        $this->command->info("Success! User 1 is now the Captain of {$barangay->name}.");
+        BarangayTerm::updateOrCreate(
+            ['user_id' => $captainUser->id, 'position_id' => $captainRole->id],
+            ['barangay_code' => $barangay->id, 'started_at' => now()]
+        );
+        $captainUser->assignRole($captainRole);
+        $this->command->info("Assigned Captain: {$captainUser->first_name} {$captainUser->last_name}");
+
+        // 5. Get residents of Santo Domingo (excluding the captain) to be officials
+        $santoDomingoResidents = User::where('barangay_code', $barangay->barangay_code)
+            ->where('id', '!=', $captainUser->id)
+            ->limit(8) // 7 Kagawads + 1 Secretary
+            ->get();
+
+        if ($santoDomingoResidents->count() < 8) {
+            $this->command->warn('Not enough residents in Santo Domingo to fill all official positions (need at least 8).');
+        }
+
+        // 6. Assign 7 Kagawads
+        $kagawads = $santoDomingoResidents->take(7);
+        foreach ($kagawads as $kagawad) {
+            BarangayTerm::updateOrCreate(
+                ['user_id' => $kagawad->id, 'position_id' => $kagawadRole->id],
+                ['barangay_code' => $barangay->id, 'started_at' => now()]
+            );
+            $kagawad->assignRole($kagawadRole);
+            $this->command->info("Assigned Kagawad: {$kagawad->first_name} {$kagawad->last_name}");
+        }
+
+        // 7. Assign 1 Secretary
+        $secretary = $santoDomingoResidents->skip(7)->first();
+        if ($secretary) {
+            BarangayTerm::updateOrCreate(
+                ['user_id' => $secretary->id, 'position_id' => $secretaryRole->id],
+                ['barangay_code' => $barangay->id, 'started_at' => now()]
+            );
+            $secretary->assignRole($secretaryRole);
+            $this->command->info("Assigned Secretary: {$secretary->first_name} {$secretary->last_name}");
+        }
+
+        $this->command->info("Barangay officials for {$barangay->name} seeded successfully.");
     }
 }

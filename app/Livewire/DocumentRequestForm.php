@@ -54,7 +54,7 @@ class DocumentRequestForm extends Component
 
     public function setDoc($id)
     {
-        $this->selectedDocMetadata = DB::table('document_type_properties')->find($id);
+        $this->selectedDocMetadata = (array) DB::table('document_type_properties')->where('id', $id)->first();
 
         if (!$this->selectedDocMetadata)
             return;
@@ -66,7 +66,7 @@ class DocumentRequestForm extends Component
         $this->requirements = $event->requirements;
 
         // 2. Prepare Dynamic Fields (BUT DON'T SHOW THEM YET)
-        $modelClass = $this->selectedDocMetadata->doc_type_model;
+        $modelClass = $this->selectedDocMetadata['doc_type_model'];
 
         // Ensure fully qualified class name
         if (!str_contains($modelClass, '\\')) {
@@ -110,7 +110,7 @@ class DocumentRequestForm extends Component
             'purpose' => 'required|min:5',
         ]);
 
-        $metadata = (array) $this->selectedDocMetadata;
+        $metadata = $this->selectedDocMetadata;
 
         try {
             // We call the service here. Livewire handles the dependency injection.

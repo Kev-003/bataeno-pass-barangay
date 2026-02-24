@@ -40,6 +40,8 @@ class DocumentRequestService
 
         if ($officials->count() > 0) {
             Notification::send($officials, new DocumentRequestReceived($transaction));
+
+
         }
     }
 }

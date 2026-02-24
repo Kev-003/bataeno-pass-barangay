@@ -6,13 +6,27 @@ use Illuminate\Support\Facades\Broadcast;
 |--------------------------------------------------------------------------
 | Broadcast Channels
 |--------------------------------------------------------------------------
-|
-| Here you may register all of the event broadcasting channels that your
-| application supports. The given channel authorization callbacks are
-| used to check if an authenticated user can listen to the channel.
-|
 */
 
+// Default Livewire / Filament user channel
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
+});
+
+// Officials listen here for new document requests submitted to their barangay.
+// Any official whose active barangay term matches the barangay_id can listen.
+Broadcast::channel('barangay.{barangayId}.requests', function ($user, $barangayId) {
+    // Allow if the user is an official of this barangay (has an active BarangayTerm)
+    return $user->barangayTerms()
+        ->where('barangay_code', $barangayId)
+        ->where(function ($q) {
+            $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
+        })
+        ->exists();
+});
+
+// Residents listen here to be notified when their document is issued.
+// Only the document's requester (by user id) may subscribe.
+Broadcast::channel('resident.{userId}.documents', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
 });

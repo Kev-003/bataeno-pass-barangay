@@ -16,11 +16,11 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         // 1. Define the Permission "Blocks" (The Bases)
-        $residentBase = [
-            'request documents',
-            'view my documents',
-            'view my profile',
-        ];
+        // $residentBase = [
+        //     'request documents',
+        //     'view my documents',
+        //     'view my profile',
+        // ];
 
         $householdHead = [      //FUTURE IMPLEMENTATION: prioritize documents
             'edit my household',
@@ -39,9 +39,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // 2. Define the Role-to-Permission Mapping
         $rolePermissions = [
-            'Resident' => $residentBase,
+            // 'Resident' => $residentBase,
 
-            'Household Head' => array_merge($residentBase, $householdHead),
+            'Household Head' => $householdHead,
 
             'Secretary' => array_merge($officialBase, [
                 'make requests for residents'
@@ -58,6 +58,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage my officials',
                 'manage my barangay info'
             ]),
+
+            'Delegate' => 'approve requests',
 
             'City Admin' => [
                 'manage officials',

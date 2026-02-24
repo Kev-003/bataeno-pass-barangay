@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('code')->unique(); // e.g., BRGY_CLR
             $table->string('name');          // e.g., Barangay Clearance
+            $table->string('doc_type_model');
             $table->text('description')->nullable();
             $table->decimal('default_fee', 10, 2)->default(0);
             $table->integer('validity_days')->nullable();

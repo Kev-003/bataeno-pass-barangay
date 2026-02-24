@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Barangay Document')</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Essential for PDF rendering */
         @page {
@@ -36,9 +37,7 @@
             align-items: center;
             justify-content: space-between;
             text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .seal-img {
@@ -105,26 +104,59 @@
         <div class="watermark">OFFICIAL COPY</div>
 
         <header class="header">
-            {{-- City/Municipality Seal (Left) --}}
-            <x-documents.components.seal :image="$seal" />
-            <div class="header-text">
-                <p>Republic of the Philippines</p>
-                <p>Province of {{ $barangay->province }}</p>
-                <p>City of {{ $barangay->city }}</p>
-                <h1>Office of the Sangguniang Barangay</h1>
-                <h2>Barangay {{ $barangay->name }}</h2>
+            {{-- LEFT SEAL --}}
+            <div class="seal-container" style="width: 90px;">
+                @if(!$barangaySeal)
+                    {{-- Scenario: No Brgy Seal -> Show Provincial --}}
+                    <img src="{{ $provincialSeal }}" alt="Provincial Seal" class="seal-img">
+                @else
+                    {{-- Scenario: Brgy Seal Exists -> Show City/Municipal --}}
+                    <img src="{{ $citySeal }}" alt="City Seal" class="seal-img">
+                @endif
             </div>
 
-            {{-- Barangay Seal (Right - The private one we fetched) --}}
-            <x-documents.components.seal :image="$seal" />
+            {{-- CENTER TEXT --}}
+            <div class="header-text">
+                <p>Republic of the Philippines</p>
+                <p>Province of {{ $barangay->province ?? 'Bataan' }}</p>
+                <p>{{ $municipality->name }}, Bataan</p>
+                <h1>Office of the Sangguniang Barangay</h1>
+                <h2 style="color: #000;">Barangay {{ $barangay->name ?? 'Santo Domingo' }}</h2>
+            </div>
+
+            {{-- RIGHT SEAL --}}
+            <div class="seal-container" style="width: 90px;">
+                @if(!$barangaySeal)
+                    {{-- Scenario: No Brgy Seal -> Show City/Municipal --}}
+                    <img src="{{ $municipalSeal }}" alt="Municipal Seal" class="seal-img">
+                @else
+                    {{-- Scenario: Brgy Seal Exists -> Show Barangay --}}
+                    <img src="{{ $barangaySeal }}" alt="Barangay Seal" class="seal-img">
+                @endif
+            </div>
         </header>
+
+        <style>
+            .seal-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .seal-img {
+                width: 85px;
+                height: 85px;
+                object-fit: contain;
+            }
+        </style>
 
         <main class="content">
             @yield('content')
         </main>
 
         <footer class="footer">
-            <p>{{ $barangay->address }} | Contact: {{ $barangay->contact_number }}</p>
+            <p>{{ $barangay->address ?? "Santo Domingo" }} | Contact: {{ $barangay->contact_number ?? "0912345678" }}
+            </p>
             <p>Generated on {{ now()->format('F d, Y h:i A') }}</p>
         </footer>
     </div>
