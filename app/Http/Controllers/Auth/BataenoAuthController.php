@@ -18,9 +18,8 @@ class BataenoAuthController extends Controller
         $state = Str::random(40);
         session()->put('oauth_state', $state);
 
-        // 2. MANUALLY build the URI to match what YOU typed in the Bataan Portal
-        // DON'T use url() helper here, type it exactly as it appears in their dashboard
-        $registered_uri = "http://localhost:8000/callback";
+        // Use the URI configured in .env to ensure it matches the Bataan Portal
+        $registered_uri = config('services.bataeno.redirect');
 
         $params = [
             'client_id' => config('services.bataeno.client_id'),
