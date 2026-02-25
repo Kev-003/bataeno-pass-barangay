@@ -9,13 +9,14 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
+use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use App\Notifications\DocumentRequestReceived;
 use Spatie\Permission\Traits\HasRoles;
 
-
-
-class User extends Authenticatable implements FilamentUser, HasName
+class User extends Authenticatable implements FilamentUser, HasName, HasTenants
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
@@ -82,6 +83,11 @@ class User extends Authenticatable implements FilamentUser, HasName
         return $this->belongsTo(Family::class);
     }
 
+    public function barangay()
+    {
+        return $this->belongsTo(Barangay::class, 'barangay_code', 'barangay_code');
+    }
+
     public function transactions()
     {
         return $this->hasMany(DocumentTransaction::class, 'requester_id');
@@ -139,7 +145,45 @@ class User extends Authenticatable implements FilamentUser, HasName
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->isAdmin();
+        if ($panel->getId() === 'admin') {
+            return $this->isAdmin();
+        }
+
+        if ($panel->getId() === 'official') {
+            return $this->isOfficial();
+        }
+
+        return false;
+    }
+
+    public function getTenants(Panel $panel): array|Collection
+    {
+        // For the official panel, only return the specific barangay they hold office in
+        if ($panel->getId() === 'official') {
+            $termCode = $this->activeTerm?->barangay_code;
+
+            if ($termCode) {
+                return Barangay::where('barangay_code', $termCode)->get();
+            }
+        }
+
+        // For other panels, return all barangays they are associated with
+        $codes = $this->getActiveBarangayCodes();
+
+        return Barangay::whereIn('barangay_code', $codes)->get();
+    }
+
+    public function canAccessTenant(Model $tenant): bool
+    {
+        if (!$tenant instanceof Barangay) {
+            return false;
+        }
+
+        // Check if the tenant code is in the user's active codes
+        return in_array(
+            Barangay::normalizeCode($tenant->barangay_code),
+            $this->getActiveBarangayCodes()
+        );
     }
 
     /**

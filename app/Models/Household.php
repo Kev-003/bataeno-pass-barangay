@@ -31,4 +31,16 @@ class Household extends Model
     {
         return $this->hasMany(HouseholdMemberProfile::class, 'household_id');
     }
+
+    public function barangay()
+    {
+        return $this->hasOneThrough(
+            Barangay::class,
+            House::class,
+            'id', // Foreign key on houses table...
+            'barangay_code', // Foreign key on barangays table...
+            'house_id', // Local key on households table...
+            'barangay_code' // Local key on houses table...
+        );
+    }
 }
