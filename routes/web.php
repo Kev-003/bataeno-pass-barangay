@@ -1,19 +1,24 @@
 <?php
 
-use App\Livewire\Officials\WalkInRequest;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+// Controllers
 use App\Http\Controllers\Auth\BataenoAuthController;
+use App\Http\Controllers\ResidentLookupController;
+use App\Http\Controllers\DocumentRequestController;
+// Livewire Components
 use App\Livewire\DocumentRequestForm;
 use App\Livewire\Documents;
 use App\Livewire\HouseholdProfiles;
-
 use App\Livewire\Officials\Dashboard;
 use App\Livewire\Officials\ResidentsIndex;
 use App\Livewire\Officials\DocumentProcessing;
 use App\Livewire\Officials\DocumentApprovalProcess;
 use App\Livewire\Officials\Profile;
 use App\Livewire\Officials\OfficialManagement;
-
+use App\Livewire\Officials\WalkInRequest;
 
 Route::view('/', 'welcome');
 
@@ -62,8 +67,7 @@ Route::get('/auth/bataeno', [BataenoAuthController::class, 'redirect'])->name('b
 // The link the government website sends the user back to
 Route::get('/callback', [BataenoAuthController::class, 'callback']);
 
-Route::view('login', 'livewire.pages.auth.login')
-    ->name('bataeno.login');
+Route::view('login', 'livewire.pages.auth.login')->name('bataeno.login');
 
 // Standard Resident Dashboard
 Route::middleware(['auth'])->get('/dashboard', function () {
@@ -72,30 +76,24 @@ Route::middleware(['auth'])->get('/dashboard', function () {
 
 Route::get('/documents', Documents::class)->name('documents');
 
-// // Official Panel (Restricted)
-// Route::middleware(['auth'])->get('/official', function () {
-//     if (!auth()->user()->isOfficial()) {
-//         abort(403, 'You are not a registered official.');
-//     }
-//     return view('livewire.officials.dashboard');
-// })->name('official.dashboard');
-
-// Route::get('/official', Dashboard::class)->middleware(['auth']);
-
-//route implementing middleware
+// Official Panel (Restricted)
 Route::middleware(['auth', 'barangay.access'])
     ->prefix('official/{barangay_code}')
     ->group(function () {
         Route::get('/', Dashboard::class)->name('official.dashboard');
         Route::get('/residents', ResidentsIndex::class)->name('official.residents');
         Route::get('/document-processing', DocumentProcessing::class)->name('official.document-processing');
+        
         Route::get('/document-approval-process/{id}', DocumentApprovalProcess::class)
             ->name('official.document-approval-process')
             ->middleware('can:approve requests');
+            
         Route::get('/walk-in-request', WalkInRequest::class)
             ->name('official.walk-in-request')
             ->middleware('permission:manage my barangay info|make requests for residents');
+            
         Route::get('/profile', Profile::class)->name('official.profile');
+        
         Route::get('/official-management', OfficialManagement::class)
             ->name('official.official-management')
             ->middleware('can:manage my officials');
@@ -105,12 +103,10 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-use App\Http\Controllers\DocumentRequestController;
-
 Route::get('/document-request', DocumentRequestForm::class)->name('document.request');
 Route::post('/document-request', [DocumentRequestController::class, 'store'])->name('document-request.store');
 
-Route::get('documents/temp/{path}', function (Illuminate\Http\Request $request, string $path) {
+Route::get('documents/temp/{path}', function (Request $request, string $path) {
     $transaction = \App\Models\DocumentTransaction::where('file_path', $path)->firstOrFail();
 
     // Check if the user is authorized (Owner ONLY)
@@ -127,14 +123,32 @@ Route::get('documents/temp/{path}', function (Illuminate\Http\Request $request, 
     // Invalidate the token immediately
     $transaction->update(['download_token' => null]);
 
-    return \Illuminate\Support\Facades\Storage::disk('documents')->download($path);
+    return Storage::disk('documents')->download($path);
 })
     ->where('path', '.*')
     ->middleware(['auth', 'signed'])
     ->name('documents.temp');
 
 Route::get('household-profiles', HouseholdProfiles::class)->name('household-profiles');
-//logout route
+
+// Logout route
 Route::get('logout', [BataenoAuthController::class, 'logout'])->name('logout');
 
 require __DIR__ . '/auth.php';
+
+
+// ==========================================
+// NFC & Walk-In Features
+// ==========================================
+
+// NFC/resident lookup used by the NFC scanner frontend
+// Match allows both GET (for browser testing) and POST (for the JS fetch API) safely
+Route::match(['get', 'post'], '/residents/lookup', ResidentLookupController::class)->name('residents.lookup');
+
+// Endpoints used by external NFC client to push latest resident data
+Route::post('/nfc/set', [App\Http\Controllers\NfcController::class, 'setLatest']);
+Route::get('/nfc/latest', [App\Http\Controllers\NfcController::class, 'latest']);
+
+// NFC scanner page — use Livewire `NfcListener` component directly
+Route::get('/nfc-scanner', \App\Livewire\Officials\NfcListener::class)->name('nfc.scanner');
+

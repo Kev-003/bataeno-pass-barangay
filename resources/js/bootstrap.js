@@ -37,19 +37,22 @@ window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
  * allow your team to quickly build robust real-time web applications.
  */
 
-import "./echo";
+// Echo / Pusher disabled temporarily to avoid WebSocket connection errors
+// If you need real-time broadcasting, enable and configure Echo or run a
+// compatible WebSocket server (e.g., beyondcode/laravel-websockets) and
+// set the VITE_REVERB_* environment variables accordingly.
 
-import Echo from "laravel-echo";
+// import "./echo";
 
-import Pusher from "pusher-js";
-window.Pusher = Pusher;
-
-window.Echo = new Echo({
-    broadcaster: "reverb",
-    key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? "https") === "https",
-    enabledTransports: ["ws", "wss"],
-});
+// import Echo from "laravel-echo";
+// import Pusher from "pusher-js";
+// window.Pusher = Pusher;
+// window.Echo = new Echo({
+//     broadcaster: "reverb",
+//     key: import.meta.env.VITE_REVERB_APP_KEY,
+//     wsHost: import.meta.env.VITE_REVERB_HOST,
+//     wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+//     wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+//     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? "https") === "https",
+//     enabledTransports: ["ws", "wss"],
+// });

@@ -14,6 +14,8 @@ use App\Http\Controllers\DocumentController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::post('/lookup-owner', [App\Http\Controllers\NfcController::class, 'lookup']);
+
 
 Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserBelongsToBarangay::class])->group(function () {
 

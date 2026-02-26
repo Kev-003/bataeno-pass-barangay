@@ -1,6 +1,12 @@
 import "./bootstrap";
 import initDotGrid from "./animations/DotGrid";
 import Grainient from "./animations/Grainient";
+import './bootstrap';
+import { NfcHandler } from "@brynrgnzls/nfc-listener";
+
+// Expose it globally for Blade scripts
+window.NfcHandler = NfcHandler;
+
 
 // Register Alpine data with the instance used by Livewire 3
 document.addEventListener("livewire:init", () => {

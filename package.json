@@ -3,7 +3,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "nfc-server": "node scripts/nfc-server.js",
+        "nfc-mock": "node scripts/mock-nfc-server.js"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -17,8 +19,10 @@
         "vite": "^5.4.21"
     },
     "dependencies": {
+        "@brynrgnzls/nfc-listener": "^1.0.2",
         "gsap": "^3.14.2",
         "ogl": "^1.0.11",
-        "puppeteer": "^24.37.3"
+        "puppeteer": "^24.37.3",
+        "socket.io": "^4.8.3"
     }
 }
