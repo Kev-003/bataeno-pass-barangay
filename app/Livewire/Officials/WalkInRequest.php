@@ -24,40 +24,46 @@ protected function getListeners()
     ];
 }
 
-    public function onNfcUid($uidOrPayload, $residentData = null)
+    public function onNfcUid(?string $uid = null, $resident = null)
     {
-        // Support multiple payload shapes depending on Livewire version / JS call:
-        // - (uid, residentData)
-        // - ({ uid: ..., resident: {...} }) delivered as a single object via Livewire.dispatch
-        $uid = null;
+        // Livewire 3 maps dispatched keys to parameter names; accept `uid` and `resident`.
+        // Also support legacy single-object payloads passed as the first arg.
 
-        if (is_array($uidOrPayload) || (is_object($uidOrPayload) && ! is_string($uidOrPayload))) {
-            $payload = (array) $uidOrPayload;
+        // Legacy payload handling: if $uid is not a string but an array/object payload
+        if ((is_array($uid) || (is_object($uid) && ! is_string($uid))) && ! is_string($uid)) {
+            $payload = (array) $uid;
             $uid = $payload['uid'] ?? null;
-            $residentData = $payload['resident'] ?? $payload['data'] ?? $residentData;
-        } else {
-            $uid = $uidOrPayload;
+            $resident = $payload['resident'] ?? $payload['data'] ?? $resident;
+        }
+
+        // If nothing meaningful was provided, bail out (prevents autowiring issues)
+        if (is_null($uid) && empty($resident)) {
+            return;
         }
 
         $this->uid = $uid;
-        
+
+        // Normalize resident shape
+        if (is_object($resident)) {
+            $resident = (array) $resident;
+        }
+
         // Log for server-side tracing
-        
         try {
-            \Illuminate\Support\Facades\Log::info('Livewire onNfcUid invoked', ['uid' => $this->uid, 'hasResident' => (bool) $residentData]);
+            \Illuminate\Support\Facades\Log::info('Livewire onNfcUid invoked', ['uid' => $this->uid, 'hasResident' => (bool) $resident]);
         } catch (\Exception $e) {
             // ignore logging errors
         }
 
-        // Log raw payload for debugging Livewire 3 named-arg wrapping
+        // Log basic payload for debugging
         try {
-            \Illuminate\Support\Facades\Log::info('onNfcUid raw payload', ['raw' => is_scalar($uidOrPayload) ? (string)$uidOrPayload : json_encode($uidOrPayload)]);
+            \Illuminate\Support\Facades\Log::info('onNfcUid payload', ['uid' => $uid, 'resident_present' => (bool) $resident]);
         } catch (\Exception $e) {
             // ignore
         }
 
-        if ($residentData) {
-            $this->resident = $residentData;
+        if ($resident) {
+            $this->resident = $resident;
             // Notify the browser for easier debugging/confirmation
             $this->dispatch('nfc:received', uid: $this->uid, resident: $this->resident);
             return;
