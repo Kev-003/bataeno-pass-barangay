@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->string('status')->default('pending'); // pending, issued, rejected
             $table->string('request_origin'); // walk-in, online
             $table->foreignId('requester_id')->constrained('users');
-            $table->bigInteger('barangay_code'); // point to user's barangay_code (jurisdiction)
+            $table->foreignId('barangay_id')->constrained('barangays'); // point to user's barangay_id (jurisdiction)
             $table->text('purpose')->nullable();
             $table->string('file_path')->nullable();
             $table->char('checksum', 64)->nullable()->unique(); // SHA-256

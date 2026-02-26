@@ -21,7 +21,7 @@ class ResidentResource extends Resource
 
     protected static ?string $tenantRelationshipName = 'barangay';
 
-    protected static ?string $tenantIdAttribute = 'barangay_code';
+    protected static ?string $tenantIdAttribute = 'barangay_id';
 
     protected static ?string $label = 'Residents';
 

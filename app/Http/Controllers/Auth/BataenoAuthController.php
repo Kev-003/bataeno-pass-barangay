@@ -117,6 +117,12 @@ class BataenoAuthController extends Controller
         // dd($govUserData);
         $user = User::firstOrNew(['email' => $govUserData['data']['email']]);
 
+        $egovMunicityCode = $govUserData['data']['municity_code'] ?? null;
+        $egovBarangayCode = $govUserData['data']['barangay_code'] ?? null;
+
+        $municityId = $egovMunicityCode ? (\App\Models\Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
+        $barangayId = $egovBarangayCode ? (\App\Models\Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
+
         $user->fill([
             'uuid' => $govUserData['data']['uuid'] ?? null,
             // Identity
@@ -131,13 +137,9 @@ class BataenoAuthController extends Controller
             'gender' => $govUserData['data']['sex'] ?? null,
             'civil_status' => $govUserData['data']['civil_status'] ?? null,
 
-            // Location Codes
-            'municity_code' => Barangay::normalizeCode($govUserData['data']['municity_code'] ?? null),
-            'barangay_code' => Barangay::normalizeCode($govUserData['data']['barangay_code'] ?? null),
-
-            // Custom Fields
-            'municity_name' => $govUserData['data']['municity_name'] ?? null,
-            'barangay_name' => $govUserData['data']['barangay_name'] ?? null,
+            // Location IDs Lookups
+            'municity_id' => $municityId,
+            'barangay_id' => $barangayId,
 
             'egov_data' => $govUserData['data']['identities'] ?? $govUserData['data'] ?? null,
         ]);
@@ -156,7 +158,7 @@ class BataenoAuthController extends Controller
         }
 
         if ($user->isOfficial()) {
-            return redirect('/official/' . $user->barangay_code);
+            return redirect('/official/' . $user->barangay?->barangay_code);
         }
 
         return redirect('/dashboard');

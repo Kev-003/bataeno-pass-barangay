@@ -13,7 +13,7 @@ class DocumentProcessing extends Component
 
     public function mount($barangay_code)
     {
-        $this->psgc_code = Barangay::normalizeCode($barangay_code);
+        $this->psgc_code = $barangay_code;
         $barangay = Barangay::where('barangay_code', $this->psgc_code)->firstOrFail();
         $this->barangay_id = $barangay->id;
     }
@@ -21,17 +21,17 @@ class DocumentProcessing extends Component
     public function render()
     {
         return view('livewire.officials.document-processing', [
-            'pendingTransactions' => DocumentTransaction::where('barangay_code', $this->barangay_id)
+            'pendingTransactions' => DocumentTransaction::where('barangay_id', $this->barangay_id)
                 ->where('status', 'pending')
                 ->with(['requester', 'documentTypeProperty'])
                 ->latest()
                 ->get(),
-            'processingTransactions' => DocumentTransaction::where('barangay_code', $this->barangay_id)
+            'processingTransactions' => DocumentTransaction::where('barangay_id', $this->barangay_id)
                 ->where('status', 'processing')
                 ->with(['requester', 'documentTypeProperty'])
                 ->latest()
                 ->get(),
-            'completedTransactions' => DocumentTransaction::where('barangay_code', $this->barangay_id)
+            'completedTransactions' => DocumentTransaction::where('barangay_id', $this->barangay_id)
                 ->where('status', 'issued') // Mapping 'completed' in UI to 'issued' in DB
                 ->with(['requester', 'documentTypeProperty'])
                 ->latest()

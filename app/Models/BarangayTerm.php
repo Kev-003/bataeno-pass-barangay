@@ -13,7 +13,7 @@ class BarangayTerm extends Model
 
     protected $fillable = [
         'user_id',
-        'barangay_code',
+        'barangay_id',
         'position_id',
         'started_at',
         'ended_at'
@@ -26,7 +26,7 @@ class BarangayTerm extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class, 'barangay_code');
+        return $this->belongsTo(Barangay::class, 'barangay_id');
     }
 
     public function user()

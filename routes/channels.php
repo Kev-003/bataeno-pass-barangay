@@ -15,10 +15,12 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 // Officials listen here for new document requests submitted to their barangay.
 // Any official whose active barangay term matches the barangay_id can listen.
-Broadcast::channel('barangay.{barangayId}.requests', function ($user, $barangayId) {
+Broadcast::channel('barangay.{barangayCode}.requests', function ($user, $barangayCode) {
     // Allow if the user is an official of this barangay (has an active BarangayTerm)
     return $user->barangayTerms()
-        ->where('barangay_code', $barangayId)
+        ->whereHas('barangay', function ($query) use ($barangayCode) {
+            $query->where('barangay_code', $barangayCode);
+        })
         ->where(function ($q) {
             $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
         })

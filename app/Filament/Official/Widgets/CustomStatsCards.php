@@ -21,17 +21,17 @@ class CustomStatsCards extends Widget
         return [
             [
                 'title' => 'Total Residents',
-                'value' => User::where('barangay_code', $tenant->barangay_code)->count(),
+                'value' => User::where('barangay_id', $tenant->id)->count(),
                 'color' => 'blue'
             ],
             [
                 'title' => 'Total Requests',
-                'value' => DocumentTransaction::where('barangay_code', $tenant->id)->count(),
+                'value' => DocumentTransaction::where('barangay_id', $tenant->id)->count(),
                 'color' => 'emerald'
             ],
             [
                 'title' => 'Pending Requests',
-                'value' => DocumentTransaction::where('barangay_code', $tenant->id)
+                'value' => DocumentTransaction::where('barangay_id', $tenant->id)
                     ->where('status', 'pending')
                     ->count(),
                 'color' => 'rose'

@@ -30,7 +30,7 @@ class DelegationResource extends Resource
                     ->label('Delegate')
                     ->options(function () {
                         // Get officials of the current barangay
-                        return BarangayTerm::where('barangay_code', filament()->getTenant()->id)
+                        return BarangayTerm::where('barangay_id', filament()->getTenant()->id)
                             ->where('user_id', '!=', auth()->id())
                             ->get()
                             ->mapWithKeys(fn($term) => [$term->id => $term->user->name . ' (' . $term->position->name . ')']);

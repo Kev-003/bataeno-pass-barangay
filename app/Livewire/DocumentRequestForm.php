@@ -127,7 +127,7 @@ class DocumentRequestForm extends Component
 
         } catch (\Exception $e) {
             logger($e->getMessage());
-            $this->addError('submission', 'There was an error processing your request.');
+            $this->addError('submission', 'Error processing request: ' . $e->getMessage());
         }
     }
 

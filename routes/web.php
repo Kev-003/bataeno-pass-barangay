@@ -83,23 +83,23 @@ Route::get('/documents', Documents::class)->name('documents');
 // Route::get('/official', Dashboard::class)->middleware(['auth']);
 
 //route implementing middleware
-// Route::middleware(['auth', 'barangay.access'])
-//     ->prefix('official/{barangay_code}')
-//     ->group(function () {
-//         Route::get('/', Dashboard::class)->name('official.dashboard');
-//         Route::get('/residents', ResidentsIndex::class)->name('official.residents');
-//         Route::get('/document-processing', DocumentProcessing::class)->name('official.document-processing');
-//         Route::get('/document-approval-process/{id}', DocumentApprovalProcess::class)
-//             ->name('official.document-approval-process')
-//             ->middleware('can:approve requests');
-//         Route::get('/walk-in-request', WalkInRequest::class)
-//             ->name('official.walk-in-request')
-//             ->middleware('permission:manage my barangay info|make requests for residents');
-//         Route::get('/profile', Profile::class)->name('official.profile');
-//         Route::get('/official-management', OfficialManagement::class)
-//             ->name('official.official-management')
-//             ->middleware('can:manage my officials');
-//     });
+Route::middleware(['auth', 'barangay.access'])
+    ->prefix('official/{barangay_code}')
+    ->group(function () {
+        Route::get('/', Dashboard::class)->name('official.dashboard');
+        Route::get('/residents', ResidentsIndex::class)->name('official.residents');
+        Route::get('/document-processing', DocumentProcessing::class)->name('official.document-processing');
+        Route::get('/document-approval-process/{id}', DocumentApprovalProcess::class)
+            ->name('official.document-approval-process')
+            ->middleware('can:approve requests');
+        Route::get('/walk-in-request', WalkInRequest::class)
+            ->name('official.walk-in-request')
+            ->middleware('permission:manage my barangay info|make requests for residents');
+        Route::get('/profile', Profile::class)->name('official.profile');
+        Route::get('/official-management', OfficialManagement::class)
+            ->name('official.official-management')
+            ->middleware('can:manage my officials');
+    });
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])

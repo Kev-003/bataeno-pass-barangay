@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('barangay_terms', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('barangay_code')->constrained('barangays');
+            $table->foreignId('barangay_id')->constrained('barangays');
             $table->foreignId('position_id'); // Captain, Secretary
             $table->timestamp('started_at')->useCurrent();
             $table->timestamp('ended_at')->nullable();

@@ -26,7 +26,7 @@ function setupRealtimeNotifications() {
     if (!config || !config.userId || !window.Echo) return;
 
     // 1. New Request -> Official
-    if (config.barangayId) {
+    if (config.barangayId && config.isOfficial) {
         window.Echo.private(`barangay.${config.barangayId}.requests`).listen(
             ".DocumentRequestCreated",
             (e) => {

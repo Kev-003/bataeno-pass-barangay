@@ -22,7 +22,7 @@ class LatestRequests extends BaseWidget
         return $table
             ->query(
                 \App\Models\DocumentTransaction::query()
-                    ->where('barangay_code', filament()->getTenant()->id)
+                    ->where('barangay_id', filament()->getTenant()->id)
                     ->latest()
                     ->limit(5)
             )

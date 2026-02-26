@@ -43,20 +43,19 @@ class BarangayTermSeeder extends Seeder
         // 4. Assign Captain and Sync User Location
         // We ensure the user's resident barangay_code matches the 9-digit PSGC in our table
         $captainUser->update([
-            'barangay_code' => $barangay->barangay_code,
-            'municity_code' => $barangay->municity_code, // This is local ID, sync if needed
-            'barangay_name' => $barangay->name,
+            'barangay_id' => $barangay->id,
+            'municity_id' => $barangay->municity_id,
         ]);
 
         BarangayTerm::updateOrCreate(
             ['user_id' => $captainUser->id, 'position_id' => $captainRole->id],
-            ['barangay_code' => $barangay->id, 'started_at' => now()]
+            ['barangay_id' => $barangay->id, 'started_at' => now()]
         );
         $captainUser->assignRole($captainRole);
         $this->command->info("Assigned Captain: {$captainUser->first_name} {$captainUser->last_name}");
 
         // 5. Get residents of Santo Domingo (excluding the captain) to be officials
-        $santoDomingoResidents = User::where('barangay_code', $barangay->barangay_code)
+        $santoDomingoResidents = User::where('barangay_id', $barangay->id)
             ->where('id', '!=', $captainUser->id)
             ->limit(8) // 7 Kagawads + 1 Secretary
             ->get();
@@ -70,7 +69,7 @@ class BarangayTermSeeder extends Seeder
         foreach ($kagawads as $kagawad) {
             BarangayTerm::updateOrCreate(
                 ['user_id' => $kagawad->id, 'position_id' => $kagawadRole->id],
-                ['barangay_code' => $barangay->id, 'started_at' => now()]
+                ['barangay_id' => $barangay->id, 'started_at' => now()]
             );
             $kagawad->assignRole($kagawadRole);
             $this->command->info("Assigned Kagawad: {$kagawad->first_name} {$kagawad->last_name}");
@@ -81,7 +80,7 @@ class BarangayTermSeeder extends Seeder
         if ($secretary) {
             BarangayTerm::updateOrCreate(
                 ['user_id' => $secretary->id, 'position_id' => $secretaryRole->id],
-                ['barangay_code' => $barangay->id, 'started_at' => now()]
+                ['barangay_id' => $barangay->id, 'started_at' => now()]
             );
             $secretary->assignRole($secretaryRole);
             $this->command->info("Assigned Secretary: {$secretary->first_name} {$secretary->last_name}");

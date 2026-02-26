@@ -36,10 +36,8 @@ class ResidentSeeder extends Seeder
                 'place_of_birth' => 'Orion, Bataan',
                 'gender' => fake()->randomElement(['Male', 'Female']),
                 'civil_status' => fake()->randomElement(['Single', 'Married', 'Widowed', 'Separated']),
-                'barangay_code' => $santoDomingo->barangay_code,
-                'municity_code' => $orion->municity_code ?? '0000',
-                'barangay_name' => $santoDomingo->name,
-                'municity_name' => $orion->name,
+                'barangay_id' => $santoDomingo->id,
+                'municity_id' => $santoDomingo->municity_code,
             ]);
         }
 
@@ -59,10 +57,8 @@ class ResidentSeeder extends Seeder
                     'place_of_birth' => "{$otherMunicipality->name}, Bataan",
                     'gender' => fake()->randomElement(['Male', 'Female']),
                     'civil_status' => 'Single',
-                    'barangay_code' => $otherBarangay->barangay_code,
-                    'municity_code' => $otherMunicipality->municity_code ?? '0000',
-                    'barangay_name' => $otherBarangay->name,
-                    'municity_name' => $otherMunicipality->name,
+                    'barangay_id' => $otherBarangay->id,
+                    'municity_id' => $otherBarangay->municity_code,
                 ]);
             }
         }

@@ -21,7 +21,8 @@
     <script>
         window.AppConfig = {
             userId: {{ auth()->id() ?? 'null' }},
-            barangayId: {{ auth()->user()?->getActiveBarangayCode() ?? 'null' }}
+            barangayId: '{!! auth()->user()?->getActiveBarangayCode() ?? '' !!}',
+            isOfficial: {{ auth()->check() && auth()->user()->isOfficial() ? 'true' : 'false' }}
         };
     </script>
 </head>

@@ -10,22 +10,7 @@ class Barangay extends Model
 {
     use HasFactory;
 
-    /**
-     * Normalize PSGC codes from eGovPH (10 digits) to standard PSGC (9 digits).
-     * eGovPH: RR-PPP-MM-BBB (e.g. 03-008-10-024)
-     * PSGC:   RR-PP-MM-BBB  (e.g. 03-08-10-024)
-     */
-    public static function normalizeCode(?string $code): ?string
-    {
-        if (!$code)
-            return null;
 
-        if (strlen($code) === 10 && substr($code, 2, 1) === '0') {
-            return substr($code, 0, 2) . substr($code, 3);
-        }
-
-        return $code;
-    }
 
     protected $fillable = [
         'name',
@@ -54,7 +39,7 @@ class Barangay extends Model
 
     public function users()
     {
-        return $this->hasMany(User::class, 'barangay_code');
+        return $this->hasMany(User::class, 'barangay_id');
     }
 
     public function getProvinceAttribute()
