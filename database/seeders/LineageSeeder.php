@@ -34,8 +34,8 @@ class LineageSeeder extends Seeder
 
         $residents = User::where('barangay_id', $santoDomingo->id)
             ->whereNull('family_id')
-            ->get()
-            ->shuffle();
+            ->orderBy('id')
+            ->get();
 
         if ($residents->isEmpty()) {
             $this->command->error('No unassigned residents found. Run ResidentSeeder first.');
@@ -48,11 +48,35 @@ class LineageSeeder extends Seeder
         $createdGrandparents = 0;
         $deceasedCount = 0;
 
-        foreach ($families as $family) {
-            // --- GENERATION 2: Select 2-4 children ---
-            $numChildren = min(fake()->numberBetween(2, 4), $residentPool->count() - $poolIndex);
-            if ($numChildren <= 0)
-                continue;
+        foreach ($families as $index => $family) {
+            // --- GENERATION 1: Assign or Create Father and Mother for this Family ---
+            // For the first family, use resident 1 and 2 to ensure deterministic testing state for User ID 1
+            if ($index === 0 && $residentPool->count() >= 2) {
+                $father = $residentPool[0];
+                $mother = $residentPool[1];
+                $poolIndex = 2;
+
+                $father->update(['gender' => 'Male', 'civil_status' => 'Married']);
+                $mother->update(['gender' => 'Female', 'civil_status' => 'Married']);
+            } else {
+                $father = $this->createAncestor(
+                    $santoDomingo,
+                    'Male',
+                    'Married',
+                    fake()->dateTimeBetween('-65 years', '-40 years')->format('Y-m-d'),
+                    $family->family_name
+                );
+                $mother = $this->createAncestor(
+                    $santoDomingo,
+                    'Female',
+                    'Married',
+                    fake()->dateTimeBetween('-60 years', '-38 years')->format('Y-m-d'),
+                    fake()->lastName()
+                );
+            }
+
+            // --- GENERATION 2: Select 1-4 children ---
+            $numChildren = min(fake()->numberBetween(1, 4), $residentPool->count() - $poolIndex);
 
             $children = [];
             for ($c = 0; $c < $numChildren; $c++) {
@@ -62,25 +86,6 @@ class LineageSeeder extends Seeder
                 $poolIndex++;
                 $children[] = $child;
             }
-
-            if (empty($children))
-                continue;
-
-            // --- GENERATION 1: Create Father and Mother for this Family ---
-            $father = $this->createAncestor(
-                $santoDomingo,
-                'Male',
-                'Married',
-                fake()->dateTimeBetween('-65 years', '-40 years')->format('Y-m-d'),
-                $family->family_name
-            );
-            $mother = $this->createAncestor(
-                $santoDomingo,
-                'Female',
-                'Married',
-                fake()->dateTimeBetween('-60 years', '-38 years')->format('Y-m-d'),
-                fake()->lastName()
-            );
 
             // Set them as the core parents of this family unit
             $family->update([
@@ -187,7 +192,7 @@ class LineageSeeder extends Seeder
     {
         if (!$family->household_id)
             return;
-        HouseholdMemberProfile::create([
+        $profile = HouseholdMemberProfile::create([
             'user_id' => $user->id,
             'household_id' => $family->household_id,
             'role' => $role,
@@ -195,5 +200,9 @@ class LineageSeeder extends Seeder
             'presence_status' => $user->trashed() ? 'Deceased' : 'Present',
             'started_at' => now(),
         ]);
+
+        if ($role === 'Head') {
+            $family->household->update(['household_head_id' => $profile->id]);
+        }
     }
 }
