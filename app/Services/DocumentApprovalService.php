@@ -70,22 +70,17 @@ class DocumentApprovalService
         \Log::info("Attempting to load Municipal Seal for code: " . $psgcMunicity);
 
 
-        // Fetch Signature (Checking multiple formats)
-        $extensions = ['jpg', 'png', 'webp'];
         $signatureBase64 = null;
-        $foundPath = null;
 
-        foreach ($extensions as $ext) {
-            $testPath = "barangay-assets/{$psgcCode}/signatures/{$official->user_id}.{$ext}";
-            if (\Illuminate\Support\Facades\Storage::disk('local')->exists($testPath)) {
-                $foundPath = $testPath;
-                $signatureBase64 = $this->getBase64Image($testPath);
-                break;
-            }
+        // Use the exact filename generated during Profile upload.
+        $signaturePath = $official->user->digital_signature;
+
+        if ($signaturePath && \Illuminate\Support\Facades\Storage::disk('local')->exists($signaturePath)) {
+            $signatureBase64 = $this->getBase64Image($signaturePath);
         }
 
         if (!$signatureBase64) {
-            throw new \Exception("Official signature not found for ID: {$official->user_id} in formats: " . implode(', ', $extensions));
+            throw new \Exception("Official signature not configured or file missing for ID: {$official->user_id}. Go to Profile to set it up.");
         }
 
         $slug = str($transaction->documentType->name)->slug();
