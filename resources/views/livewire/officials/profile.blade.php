@@ -11,7 +11,7 @@
                 x-ref="container"
                 class="relative overflow-hidden shadow sm:rounded-3xl p-4 sm:p-8 min-h-[300px] flex items-center">
                 <div class="relative z-10 w-full">
-                    <livewire:profile-card />
+                    <livewire:official.profile-card />
                 </div>
             </div>
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">

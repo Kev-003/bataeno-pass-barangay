@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,7 +19,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser, HasName, HasTenants
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -84,6 +85,26 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
         return $this->belongsTo(Family::class);
     }
 
+    // Upward Relationship: Who is my father?
+    public function father()
+    {
+        return $this->belongsTo(User::class, 'father_id')->withTrashed();
+    }
+
+    // Upward Relationship: Who is my mother?
+    public function mother()
+    {
+        return $this->belongsTo(User::class, 'mother_id')->withTrashed();
+    }
+
+    // Downward Relationship: Who are my children?
+    public function children()
+    {
+        return $this->hasMany(User::class, 'father_id')
+            ->orWhere('mother_id', $this->id)
+            ->withTrashed();
+    }
+
     public function barangay()
     {
         return $this->belongsTo(Barangay::class, 'barangay_id');
@@ -133,8 +154,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     public function isOfficial()
     {
         return $this->hasAnyRole(['Secretary', 'Kagawad', 'Captain'])
-            || $this->isAdmin()
-            || $this->email === 'russelsantos142@gmail.com';
+            || $this->isAdmin();
     }
 
     public function isAdmin()
@@ -171,9 +191,9 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
         }
 
         // For other panels, return all barangays they are associated with
-        $codes = $this->getActiveBarangayCodes();
+        $ids = $this->getActiveBarangayIds();
 
-        return Barangay::whereIn('barangay_code', $codes)->get();
+        return Barangay::whereIn('id', $ids)->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
@@ -182,10 +202,10 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
             return false;
         }
 
-        // Check if the tenant code is in the user's active codes
+        // Check if the tenant ID is in the user's active IDs
         return in_array(
-            $tenant->barangay_code,
-            $this->getActiveBarangayCodes()
+            $tenant->id,
+            $this->getActiveBarangayIds()
         );
     }
 
@@ -209,50 +229,20 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     {
         // 1. Get IDs from Household memberships
         $householdBarangayIds = $this->householdMemberProfiles()
-            ->whereNull('ended_at')
+            ->where('presence_status', 'present')
             ->with('household.house')
-            ->orderByRaw("CASE 
-            WHEN membership_type = 'primary' THEN 1 
-            WHEN membership_type = 'transient' THEN 2 
-            WHEN membership_type = 'associate' THEN 3 
-            ELSE 4 END ASC")
             ->get()
             ->map(fn($profile) => $profile->household?->house?->barangay_id)
             ->filter();
 
-        // 2. Get ID from Official Term
-        $termBarangayId = $this->activeTerm?->barangay_id;
+        // 2. Get ID from resident property
+        $residentId = $this->barangay_id;
 
-        // 3. Merge, unique, and reset keys
-        return collect([$termBarangayId])
-            ->concat($householdBarangayIds)
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-    }
+        // 3. Get ID from Official Term
+        $termId = $this->activeTerm?->barangay_id;
 
-    /**
-     * Get active Barangay Codes for the user.
-     */
-    public function getActiveBarangayCodes(): array
-    {
-        // 1. From households
-        $householdBarangayCodes = $this->householdMemberProfiles()
-            ->where('presence_status', 'present')
-            ->with('household.house')
-            ->get()
-            ->map(fn($profile) => $profile->household?->house?->barangay_code ? $profile->household->house->barangay_code : null)
-            ->filter();
-
-        // 2. From resident property
-        $residentCode = $this->barangay ? $this->barangay->barangay_code : null;
-
-        // 3. From Official Term
-        $termCode = $this->activeTerm && $this->activeTerm->barangay ? $this->activeTerm->barangay->barangay_code : null;
-
-        // 4. From active Delegations (Where this user is the delegate)
-        $delegatedCodes = \App\Models\Delegation::whereHas('delegateTerm', function ($query) {
+        // 4. From active Delegations
+        $delegatedIds = \App\Models\Delegation::whereHas('delegateTerm', function ($query) {
             $query->where('user_id', $this->id);
         })
             ->where(function ($query) {
@@ -260,12 +250,13 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
                     ->orWhere('expires_at', '>', now());
             })
             ->get()
-            ->map(fn($d) => $d->granterTerm?->barangay?->barangay_code ? $d->granterTerm->barangay->barangay_code : null)
+            ->map(fn($d) => $d->granterTerm?->barangay_id)
             ->filter();
 
-        return collect([$termCode, $residentCode])
-            ->concat($householdBarangayCodes)
-            ->concat($delegatedCodes)
+        // 5. Merge, unique, and reset keys
+        return collect([$termId, $residentId])
+            ->concat($householdBarangayIds)
+            ->concat($delegatedIds)
             ->filter()
             ->unique()
             ->values()
@@ -291,18 +282,11 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
      */
     public function getActiveBarangayCode()
     {
-        // Priority 1: Official Seat
-        if ($this->activeTerm && $this->activeTerm->barangay) {
-            return $this->activeTerm->barangay->barangay_code;
-        }
+        $id = $this->getActiveBarangayId();
+        if (!$id)
+            return null;
 
-        // Priority 2: Resident record
-        if ($this->barangay) {
-            return $this->barangay->barangay_code;
-        }
-
-        // Priority 3: Primary Residence
-        return $this->getActiveBarangayCodes()[0] ?? null;
+        return Barangay::where('id', $id)->value('barangay_code');
     }
 
     public function hasAnyValidID(): bool

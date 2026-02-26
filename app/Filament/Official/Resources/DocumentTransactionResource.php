@@ -6,10 +6,14 @@ use App\Filament\Official\Resources\DocumentTransactionResource\Pages;
 use App\Models\DocumentTransaction;
 use Filament\Forms;
 use Filament\Forms\Form;
+use FIlament\Forms\Components\Select;
+use FIlament\Forms\Components\TextInput;
+use FIlament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
@@ -27,16 +31,16 @@ class DocumentTransactionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('requester_id')
+                Select::make('requester_id')
                     ->relationship('requester', 'email')
                     ->searchable()
                     ->required(),
-                Forms\Components\Select::make('document_type_id')
+                Select::make('document_type_id')
                     ->relationship('documentType', 'name')
                     ->required(),
-                Forms\Components\TextInput::class::make('purpose')
+                TextInput::make('purpose')
                     ->required(),
-                Forms\Components\Select::make('status')
+                Select::make('status')
                     ->options([
                         'pending' => 'Pending',
                         'issued' => 'Issued',
@@ -44,7 +48,7 @@ class DocumentTransactionResource extends Resource
                     ])
                     ->required()
                     ->disabled(fn(DocumentTransaction $record) => $record->status === 'issued'),
-                Forms\Components\Textarea::make('rejection_reason')
+                Textarea::make('rejection_reason')
                     ->visible(fn(DocumentTransaction $record) => $record->status === 'rejected')
                     ->disabled(),
             ]);
@@ -54,18 +58,18 @@ class DocumentTransactionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Date Requested')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('requester.name')
+                TextColumn::make('requester.name')
                     ->label('Resident')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('documentType.name')
+                TextColumn::make('documentType.name')
                     ->label('Document Type'),
-                Tables\Columns\TextColumn::make('purpose')
+                TextColumn::make('purpose')
                     ->limit(50),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'pending' => 'warning',

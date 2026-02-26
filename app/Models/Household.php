@@ -37,10 +37,10 @@ class Household extends Model
         return $this->hasOneThrough(
             Barangay::class,
             House::class,
-            'id', // Foreign key on houses table...
-            'barangay_code', // Foreign key on barangays table...
-            'house_id', // Local key on households table...
-            'barangay_code' // Local key on houses table...
+            'id', // Foreign key on houses table (PK of house)
+            'id', // Foreign key on barangays table (PK of barangay)
+            'house_id', // Local key on households table
+            'barangay_id' // Local key on houses table
         );
     }
 }

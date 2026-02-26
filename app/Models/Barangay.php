@@ -61,4 +61,21 @@ class Barangay extends Model
     {
         return "N/A";
     }
+
+    public function families()
+    {
+        return $this->hasMany(Family::class, 'barangay_id');
+    }
+
+    public function delegations()
+    {
+        return $this->hasManyThrough(
+            \App\Models\Delegation::class,
+            \App\Models\BarangayTerm::class,
+            'barangay_id',      // Foreign key on BarangayTerm table
+            'granter_term_id',   // Foreign key on Delegation table
+            'id',               // Local key on Barangay table
+            'id'                // Local key on BarangayTerm table
+        );
+    }
 }

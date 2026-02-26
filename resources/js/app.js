@@ -1,10 +1,23 @@
 import "./bootstrap";
 import initDotGrid from "./animations/DotGrid";
 import Grainient from "./animations/Grainient";
+import lineageD3 from "./components/LineageD3";
 
-// Register Alpine data with the instance used by Livewire 3
+// Register Alpine data components
+const registerComponents = () => {
+    if (window.Alpine) {
+        window.Alpine.data("grainient", Grainient);
+        window.Alpine.data("lineageD3", lineageD3);
+    }
+};
+
+if (window.Alpine) {
+    registerComponents();
+} else {
+    document.addEventListener("alpine:init", registerComponents);
+}
+
 document.addEventListener("livewire:init", () => {
-    window.Alpine.data("grainient", Grainient);
     setupRealtimeNotifications();
 });
 
