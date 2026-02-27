@@ -3,6 +3,7 @@
 namespace App\Livewire\Officials;
 
 use Livewire\Component;
+use Livewire\Attributes\On; // <-- Required for Livewire 3!
 
 class NfcListener extends Component
 {
@@ -12,51 +13,44 @@ class NfcListener extends Component
     public array $readerStatus = [];
     public array $readErrors = [];
 
-    // Livewire 3 listeners (dispatched from JS via Livewire.dispatch())
-    protected function getListeners(): array
-    {
-        return [
-            'nfc:connect'           => 'onConnect',
-            'nfc:disconnect'        => 'onDisconnect',
-            'nfc:cardUid'           => 'onCardUid',
-            'nfc:verifiedUid'       => 'onVerifiedUid',
-            'nfc:readerConnect'     => 'onReaderConnect',
-            'nfc:readerDisconnect'  => 'onReaderDisconnect',
-            'nfc:readError'         => 'onReadError',
-        ];
-    }
-
+    #[On('nfc:connect')]
     public function onConnect(): void
     {
         $this->connected = true;
     }
 
+    #[On('nfc:disconnect')]
     public function onDisconnect(): void
     {
         $this->connected = false;
     }
 
-    public function onCardUid(string $uid): void
+    #[On('nfc:cardUid')]
+    public function onCardUid($uid = null): void
     {
         $this->cardUid = $uid;
     }
 
-    public function onVerifiedUid(string $uid): void
+    #[On('nfc:verifiedUid')]
+    public function onVerifiedUid($uid = null): void
     {
         $this->verifiedUid = $uid;
     }
 
-    public function onReaderConnect(string $name): void
+    #[On('nfc:readerConnect')]
+    public function onReaderConnect($name = null): void
     {
         $this->readerStatus[] = "{$name} connected";
     }
 
-    public function onReaderDisconnect(string $name): void
+    #[On('nfc:readerDisconnect')]
+    public function onReaderDisconnect($name = null): void
     {
         $this->readerStatus[] = "{$name} disconnected";
     }
 
-    public function onReadError(string $err): void
+    #[On('nfc:readError')]
+    public function onReadError($err = null): void
     {
         $this->readErrors[] = $err;
     }

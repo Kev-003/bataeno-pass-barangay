@@ -18,10 +18,10 @@
                 </div>
             </div>
 
-            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Last Card UID</p>
+            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Current Card UID</p>
             <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $cardUid ?? 'None' }}</span></p>
 
-            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Last Verified UID</p>
+            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Current Verified UID</p>
             <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $verifiedUid ?? 'None' }}</span></p>
         </div>
 

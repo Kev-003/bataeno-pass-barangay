@@ -74,7 +74,6 @@
     ═══════════════════════════════════════════════════════════════════ --}}
     @if($resident && ! $loading)
         <div class="bg-gradient-to-br from-sky-900 via-sky-800 to-sky-900 rounded-2xl overflow-hidden shadow-xl">
-
             {{-- Header --}}
             <div class="px-6 pt-6 pb-5 flex items-start gap-5 border-b border-white/10">
                 {{-- Avatar --}}
@@ -97,7 +96,7 @@
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
                             </svg>
-                            Bataeno Pass Verified
+                            Current Bataeno Pass Verified
                         </span>
                         @if($source === 'local')
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full

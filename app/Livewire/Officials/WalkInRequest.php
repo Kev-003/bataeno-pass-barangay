@@ -8,59 +8,155 @@ use App\Services\DocumentRequestService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Livewire\Attributes\On; // <-- Required for Livewire 3!
 
 class WalkInRequest extends Component
 {
-    // ── NFC state ─────────────────────────────────────────────────────────────
-    public ?string $uid      = null;
-    public ?array  $resident = null;
+    public int $step = 1;
 
-    // ── Form fields ───────────────────────────────────────────────────────────
-    public string $document_type = '';
-    public string $purpose       = '';
+    public string  $document_type = '';
+    public string  $purpose       = '';
 
-    // ── Livewire 3 listeners ──────────────────────────────────────────────────
-    protected function getListeners(): array
+    public bool    $connected  = false;
+    public ?string $uid        = null;
+    public ?array  $resident   = null;
+    public bool    $loading    = false;
+    public ?string $nfcError   = null;
+
+    // ── Step 1 actions ────────────────────────────────────────────────────────
+
+    public function proceedToScan(): void
     {
-        return [
-            'nfcUidTapped'  => 'onNfcUid',
-            'nfcUidRemoved' => 'onNfcRemoved',
-        ];
-    }
-
-    // ── NFC handlers ──────────────────────────────────────────────────────────
-
-    /**
-     * Called when NfcResidentLookup dispatches 'nfcUidTapped' after a
-     * successful local DB + Bataeno verify-card lookup.
-     *
-     * Livewire 3 maps dispatch keys directly to parameter names.
-     */
-    public function onNfcUid(string $uid, array $resident = []): void
-    {
-        $this->uid      = $uid;
-        $this->resident = $resident ?: null;
-
-        Log::info('WalkInRequest: NFC uid received', [
-            'uid'  => $uid,
-            'name' => $resident['name'] ?? null,
+        $this->validate([
+            'document_type' => 'required|exists:document_type_properties,id',
+            'purpose'       => 'required|string|min:5',
         ]);
+
+        $this->step = 2;
+        $this->uid      = null;
+        $this->resident = null;
+        $this->nfcError = null;
     }
 
-    public function onNfcRemoved(): void
+    public function backToDocumentSelect(): void
     {
-        $this->uid           = null;
-        $this->resident      = null;
-        $this->document_type = '';
-        $this->purpose       = '';
+        $this->step     = 1;
+        $this->uid      = null;
+        $this->resident = null;
+        $this->nfcError = null;
+        $this->loading  = false;
     }
 
-    // ── Form submit ───────────────────────────────────────────────────────────
+    // ── NFC event handlers (only active on Step 2) ────────────────────────────
+
+    #[On('nfc:connect')]
+    public function onNfcConnect(): void
+    {
+        $this->connected = true;
+    }
+
+    #[On('nfc:disconnect')]
+    public function onNfcDisconnect(): void
+    {
+        $this->connected = false;
+    }
+
+    #[On('nfc:cardUid')]
+    public function onCardUid($uid = null): void
+    {
+        if ($this->step !== 2) return;
+
+        $this->uid      = $uid;
+        $this->resident = null;
+        $this->nfcError = null;
+    }
+
+    #[On('nfc:verifiedUid')]
+    public function onVerifiedUid($uid = null): void
+    {
+        if ($this->step !== 2) return;
+
+        $this->uid      = $uid;
+        $this->loading  = true;
+        $this->nfcError = null;
+        $this->resident = null;
+
+        try {
+            $resident = app(BataenoService::class)->findByCardUid($uid);
+
+            if ($resident) {
+                $this->resident = $resident;
+                $this->step     = 3; 
+                Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
+            } else {
+                $this->nfcError = 'This card is not registered at this barangay. The resident must log in first to register.';
+                Log::info('WalkIn: UUID not in local DB', ['uid' => $uid]);
+            }
+        } catch (\Exception $e) {
+            $this->nfcError = 'Card lookup failed: ' . $e->getMessage();
+            Log::error('WalkIn NFC error', ['uid' => $uid, 'error' => $e->getMessage()]);
+        } finally {
+            $this->loading = false;
+        }
+    }
+
+    #[On('nfc:cardRemoved')]
+    public function onCardRemoved(): void
+    {
+        if ($this->step === 2) {
+            $this->uid      = null;
+            $this->resident = null;
+            $this->nfcError = null;
+            $this->loading  = false;
+        }
+    }
+
+    #[On('nfc:fakeResident')]
+    public function onFakeResident($uid = null, $resident = null): void
+    {
+        if ($this->step !== 2) return;
+
+        $this->uid      = $uid;
+        $this->resident = $resident;
+        $this->nfcError = null;
+        $this->loading  = false;
+        $this->step     = 3;
+    }
+
+    // ── Step 3: go back to re-tap ─────────────────────────────────────────────
+
+    public function backToScan(): void
+    {
+        $this->step     = 2;
+        $this->uid      = null;
+        $this->resident = null;
+        $this->nfcError = null;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    public function getInitials(): string
+    {
+        return strtoupper(
+            substr($this->resident['first_name'] ?? '', 0, 1) .
+            substr($this->resident['last_name']  ?? '', 0, 1)
+        ) ?: '?';
+    }
+
+    public function getSelectedDocumentName(): string
+    {
+        if (! $this->document_type) return '';
+        return DB::table('document_type_properties')
+            ->where('id', $this->document_type)
+            ->value('name') ?? '';
+    }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
 
     public function submit(DocumentRequestService $service): void
     {
         $this->validate([
-            'uid'           => 'required|string|max:255',
+            'uid'           => 'required|string',
             'document_type' => 'required|exists:document_type_properties,id',
             'purpose'       => 'required|string|min:5',
         ]);
@@ -68,7 +164,7 @@ class WalkInRequest extends Component
         $user = User::where('uuid', $this->uid)->first();
 
         if (! $user) {
-            $this->dispatch('walkin:error', message: 'Resident not found in the local database.');
+            $this->nfcError = 'Resident not found in the local database.';
             return;
         }
 
@@ -87,18 +183,23 @@ class WalkInRequest extends Component
 
             if ($transaction) {
                 $this->dispatch('walkin:success', transaction_id: $transaction->id);
-                $this->onNfcRemoved();
+                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading']);
+                $this->step = 1;
             } else {
                 $this->dispatch('walkin:error', message: 'Failed to create request.');
             }
         } catch (\Exception $e) {
-            Log::error('WalkInRequest submit failed: ' . $e->getMessage());
-            $this->dispatch('walkin:error', message: 'System error while creating request.');
+            Log::error('WalkIn submission failed: ' . $e->getMessage());
+            $this->dispatch('walkin:error', message: 'System error: ' . $e->getMessage());
         }
     }
 
+    
+
     public function render()
     {
-        return view('livewire.officials.walk-in-request');
+        return view('livewire.officials.walk-in-request', [
+            'documentTypes' => DB::table('document_type_properties')->get(),
+        ]);
     }
 }

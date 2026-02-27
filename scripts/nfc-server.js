@@ -1,7 +1,7 @@
 import http from 'http';
 import { Server } from 'socket.io';
 
-const PORT = process.env.NFC_PORT || 3000;
+const PORT = process.env.NFC_PORT || 8001;
 
 const server = http.createServer(async (req, res) => {
   // Minimal POST /emit support for testing when running in mock mode
@@ -81,11 +81,8 @@ try {
 
 // If native wasn't used, emit a sample UID periodically to help testing clients.
 if (!usedNative) {
-  setInterval(() => {
-    const sample = '8421ece2-a06b-45da-9f74-cbf9affa3f90';
-    io.emit('card-uid', sample);
-    io.emit('verified_uid', sample);
-  }, 20000);
+  // Only emit sample UID when explicitly requested via POST /emit, not on interval
+  // Remove interval-based emission to avoid repeated UID events
 }
 
 server.listen(PORT, () => {
