@@ -120,7 +120,7 @@ class DocumentApprovalService
         $html = view("livewire.documents.templates.{$slug}", $viewData)->render();
 
         $docSlug = str($transaction->documentType->name)->slug();
-        $fileName = "{$transaction->barangay->barangay_code}/{$transaction->requester->id}/{$docSlug}/{$transaction->id}_signed.pdf";
+        $fileName = "{$transaction->requester->id}/{$transaction->barangay->barangay_code}/{$docSlug}/{$transaction->id}_signed.pdf";
         $fullPath = \Illuminate\Support\Facades\Storage::disk('documents')->path($fileName);
 
         $directory = dirname($fullPath);

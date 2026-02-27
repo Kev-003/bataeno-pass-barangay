@@ -64,7 +64,20 @@ Officials review incoming requests. Upon approval:
 
 ---
 
-## 5. Future Considerations
+## 5. Document Storage (User-Centric)
+
+To ensure residents maintain access to their historical documents even after moving barangays, the file storage structure uses a user-centric hierarchy:
+
+- **Path Structure**: `storage/app/generated/{user_id}/{barangay_code}/{doc_slug}/{transaction_id}_signed.pdf`
+- **Rationale**: Groups all documents belonging to a single user in one top-level directory, while maintaining sub-organization by the issuing authority.
+- **Access Control**:
+    - **Residents**: Can download any document where they are the `requester_id`.
+    - **Officials**: Can download documents issued by their own Barangay.
+    - **Admins**: Have global download permissions for audit and support.
+
+---
+
+## 6. Future Considerations
 
 - **Automatic Leaving**: Notifying the previous household when a member becomes "Present" in a new one.
 - **Dependent Management**: Allowing Heads to update the economic status or profile details of their dependents.

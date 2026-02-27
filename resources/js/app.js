@@ -40,9 +40,8 @@ function setupRealtimeNotifications() {
 
     // 1. New Request -> Official
     if (config.barangayId && config.isOfficial) {
-        window.Echo.private(`barangay.${config.barangayId}.requests`).listen(
-            ".DocumentRequestCreated",
-            (e) => {
+        window.Echo.private(`barangay.${config.barangayId}.requests`)
+            .listen(".DocumentRequestCreated", (e) => {
                 showToast(
                     "New Request",
                     `${e.requester} requested a ${e.document_type}`,
@@ -52,8 +51,16 @@ function setupRealtimeNotifications() {
                 if (window.Livewire) {
                     window.Livewire.dispatch("notificationReceived");
                 }
-            },
-        );
+            })
+            .listen(".ResidencyRequestSubmitted", (e) => {
+                showToast(
+                    "New Residency Application",
+                    `${e.residentName} applied for residency in Brgy. ${e.barangayName}`,
+                    "info",
+                );
+                if (window.Livewire)
+                    window.Livewire.dispatch("notificationReceived");
+            });
     }
 
     // 2. Document Issued -> Resident

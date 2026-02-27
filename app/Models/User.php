@@ -101,8 +101,10 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     public function children()
     {
         return $this->hasMany(User::class, 'father_id')
-            ->orWhere('mother_id', $this->id)
-            ->withTrashed();
+            ->withTrashed()
+            ->union(
+                User::withTrashed()->where('mother_id', $this->id)
+            );
     }
 
     public function barangay()
@@ -142,18 +144,14 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
                 $sub->whereHas('barangay', function ($bSub) use ($barangayCode) {
                     $bSub->where('barangay_code', $barangayCode);
                 });
-            })
-                // 2. OR if they are a Super Admin (Global access)
-                ->orWhereIn('email', [
-                    'kevern920@gmail.com',
-                    'admin@bataan.gov.ph',
-                ]);
+            });
         });
     }
 
-    public function isOfficial()
+    public function isOfficial(): bool
     {
         return $this->hasAnyRole(['Secretary', 'Kagawad', 'Captain'])
+            || $this->activeTerm()->exists()
             || $this->isAdmin();
     }
 
@@ -161,8 +159,10 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     {
         return $this->hasAnyRole(['Admin', 'Super Admin'])
             || in_array($this->email, [
-                'kevern920@gmail.com',
+                'kevern920@gmail.com', //DEVS
                 'admin@bataan.gov.ph',
+                'russelsantos142@gmail.com' //DEVS
+
             ]);
     }
 
@@ -229,7 +229,7 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     {
         // 1. Get IDs from Household memberships
         $householdBarangayIds = $this->householdMemberProfiles()
-            ->where('presence_status', 'present')
+            ->where('presence_status', 'Present')
             ->with('household.house')
             ->get()
             ->map(fn($profile) => $profile->household?->house?->barangay_id)

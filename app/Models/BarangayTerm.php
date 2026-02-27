@@ -47,4 +47,15 @@ class BarangayTerm extends Model
         return $this->user->name;
     }
 
+    protected static function booted(): void
+    {
+        static::created(function (BarangayTerm $term) {
+            $term->user?->assignRole($term->position); // e.g. 'Captain', 'Kagawad'
+        });
+
+        static::deleted(function (BarangayTerm $term) {
+            $term->user?->removeRole($term->position);
+        });
+    }
+
 }

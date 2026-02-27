@@ -89,6 +89,12 @@ class DocumentTransactionResource extends Resource
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('download')
+                    ->label('Download')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('info')
+                    ->hidden(fn(DocumentTransaction $record) => $record->status !== 'issued')
+                    ->url(fn(DocumentTransaction $record) => $record->getTemporaryDownloadUrl(), shouldOpenInNewTab: true),
                 Tables\Actions\ViewAction::make()
                     ->hidden(fn(DocumentTransaction $record) => $record->status === 'pending')
                     ->modalContent(fn(DocumentTransaction $record) => view('filament.official.resources.document-transaction-resource.approval-details', ['record' => $record])),

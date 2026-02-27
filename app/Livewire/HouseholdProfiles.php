@@ -108,7 +108,7 @@ class HouseholdProfiles extends Component
             // Assuming subdivision and housing_unit are also required for 'new' based on original code,
             // but the instruction only specified 'street' for validation.
             // Adding them here to maintain similar validation logic for 'new' requests.
-            $rules['subdivision'] = 'required|string|max:255';
+            $rules['subdivision'] = 'nullable|string|max:255';
             $rules['housing_unit'] = 'nullable|string|max:255'; // Original didn't validate housing_unit, making it nullable here.
         } else {
             $rules['household_id'] = 'required|exists:households,id';
@@ -138,7 +138,9 @@ class HouseholdProfiles extends Component
             $data['subdivision'] = $h->house->subdivision;
         }
 
-        \App\Models\ResidencyRequest::create($data);
+        $residencyRequest = \App\Models\ResidencyRequest::create($data);
+
+        event(new \App\Events\ResidencyRequestSubmitted($residencyRequest));
 
         $this->reset(['barangay_id', 'household_id', 'housing_unit', 'street', 'subdivision', 'role', 'membership_type', 'ownership', 'showRequestModal', 'request_type']);
         session()->flash('success', 'Your residency request has been submitted and is pending verification.');

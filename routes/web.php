@@ -113,9 +113,14 @@ Route::post('/document-request', [DocumentRequestController::class, 'store'])->n
 Route::get('documents/temp/{path}', function (Illuminate\Http\Request $request, string $path) {
     $transaction = \App\Models\DocumentTransaction::where('file_path', $path)->firstOrFail();
 
-    // Check if the user is authorized (Owner ONLY)
-    if ((int) auth()->id() !== (int) $transaction->requester_id) {
-        abort(403, 'Unauthorized: Only the document owner can download this file.');
+    // Check if the user is authorized (Owner OR Official of the issuing Barangay)
+    $user = auth()->user();
+    $isOwner = (int) $user->id === (int) $transaction->requester_id;
+
+    $isOfficial = $user->isOfficial() && ($user->isAdmin() || in_array($transaction->barangay_id, $user->getActiveBarangayIds()));
+
+    if (!$isOwner && !$isOfficial) {
+        abort(403, 'Unauthorized: You do not have permission to download this file.');
     }
 
     // Single-use token logic
