@@ -1,30 +1,55 @@
-<main>
-    <h1>NFC Listener Standalone Page</h1>
-    <p>Status: {{ $connected ? 'Connected' : 'Disconnected' }}</p>
-    <p>Last Card UID: {{ $cardUid ?? 'None' }}</p>
-    <p>Last Verified UID: {{ $verifiedUid ?? 'None' }}</p>
+<main class="bp-panel p-6 rounded-2xl font-sans bg-sky-50 border border-sky-100">
+    <div class="px-6 py-5 grid grid-cols-2 gap-x-8 gap-y-5">
+        <div>
+            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest">Status</p>
+            <div class="mt-2 flex items-center gap-3">
+                <span class="relative inline-flex h-4 w-4 items-center justify-center flex-shrink-0">
+                    @if($connected)
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-lime-500"></span>
+                    @else
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-gray-300"></span>
+                    @endif
+                </span>
 
-    <h2>Reader Status</h2>
-    @if(empty($readerStatus))
-        <p>No reader events</p>
-    @else
-        <ul>
-            @foreach($readerStatus as $entry)
-                <li>{{ $entry }}</li>
-            @endforeach
-        </ul>
-    @endif
+                <div>
+                    <div class="text-sky-800 font-bold text-lg leading-none">{{ $connected ? 'Connected' : 'Disconnected' }}</div>
+                    <div class="text-sky-400 text-xs mt-0.5">{{ $connected ? 'NFC reader is online' : 'NFC reader is offline' }}</div>
+                </div>
+            </div>
 
-    <h2>Read Errors</h2>
-    @if(empty($readErrors))
-        <p>No errors</p>
-    @else
-        <ul>
-            @foreach($readErrors as $err)
-                <li>{{ $err }}</li>
-            @endforeach
-        </ul>
-    @endif
+            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Last Card UID</p>
+            <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $cardUid ?? 'None' }}</span></p>
+
+            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Last Verified UID</p>
+            <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $verifiedUid ?? 'None' }}</span></p>
+        </div>
+
+        <div>
+            <h2 class="text-sky-800 font-semibold">Reader Status</h2>
+            @if(empty($readerStatus))
+                <p class="text-sky-500 mt-1">No reader events</p>
+            @else
+                <ul class="list-disc pl-5 mt-1 text-sky-700">
+                    @foreach($readerStatus as $entry)
+                        <li class="py-0.5">{{ $entry }}</li>
+                    @endforeach
+                </ul>
+            @endif
+
+            <h2 class="text-sky-800 font-semibold mt-4">Read Errors</h2>
+            @if(empty($readErrors))
+                <p class="text-sky-500 mt-1">No errors</p>
+            @else
+                <ul class="list-disc pl-5 mt-1 text-red-700">
+                    @foreach($readErrors as $err)
+                        <li class="py-0.5">{{ $err }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
+    </div>
 
     {{-- NFC socket bridge --}}
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.3/dist/socket.io.min.js"></script>

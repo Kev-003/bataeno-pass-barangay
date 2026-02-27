@@ -42,7 +42,7 @@ window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
 // compatible WebSocket server (e.g., beyondcode/laravel-websockets) and
 // set the VITE_REVERB_* environment variables accordingly.
 
-// import "./echo";
+import "./echo";
 
 // import Echo from "laravel-echo";
 // import Pusher from "pusher-js";
