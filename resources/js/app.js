@@ -7,10 +7,23 @@ import { NfcHandler } from "@brynrgnzls/nfc-listener";
 // Expose it globally for Blade scripts
 window.NfcHandler = NfcHandler;
 
+import lineageD3 from "./components/LineageD3";
 
-// Register Alpine data with the instance used by Livewire 3
+// Register Alpine data components
+const registerComponents = () => {
+    if (window.Alpine) {
+        window.Alpine.data("grainient", Grainient);
+        window.Alpine.data("lineageD3", lineageD3);
+    }
+};
+
+if (window.Alpine) {
+    registerComponents();
+} else {
+    document.addEventListener("alpine:init", registerComponents);
+}
+
 document.addEventListener("livewire:init", () => {
-    window.Alpine.data("grainient", Grainient);
     setupRealtimeNotifications();
 });
 
@@ -32,10 +45,9 @@ function setupRealtimeNotifications() {
     if (!config || !config.userId || !window.Echo) return;
 
     // 1. New Request -> Official
-    if (config.barangayId) {
-        window.Echo.private(`barangay.${config.barangayId}.requests`).listen(
-            ".DocumentRequestCreated",
-            (e) => {
+    if (config.barangayId && config.isOfficial) {
+        window.Echo.private(`barangay.${config.barangayId}.requests`)
+            .listen(".DocumentRequestCreated", (e) => {
                 showToast(
                     "New Request",
                     `${e.requester} requested a ${e.document_type}`,
@@ -45,8 +57,16 @@ function setupRealtimeNotifications() {
                 if (window.Livewire) {
                     window.Livewire.dispatch("notificationReceived");
                 }
-            },
-        );
+            })
+            .listen(".ResidencyRequestSubmitted", (e) => {
+                showToast(
+                    "New Residency Application",
+                    `${e.residentName} applied for residency in Brgy. ${e.barangayName}`,
+                    "info",
+                );
+                if (window.Livewire)
+                    window.Livewire.dispatch("notificationReceived");
+            });
     }
 
     // 2. Document Issued -> Resident

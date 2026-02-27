@@ -21,8 +21,11 @@ return new class extends Migration {
             $table->string('last_name');
             $table->string('suffix')->nullable();
 
+            $table->string('mother_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('father_id')->nullable()->constrained('users')->nullOnDelete();
+
             $table->date('date_of_birth');
-            $table->string('place_of_birth');
+            $table->string('place_of_birth')->nullable();
             $table->string('gender');
             $table->string('civil_status');
 
@@ -30,10 +33,8 @@ return new class extends Migration {
             $table->string('occupation')->nullable();
             $table->timestamp('registered_at')->useCurrent();
 
-            $table->string('municity_code')->nullable();
-            $table->string('municity_name')->nullable();
-            $table->string('barangay_code')->nullable();
-            $table->string('barangay_name')->nullable();
+            $table->foreignId('municity_id')->nullable()->constrained('municipalities')->nullOnDelete();
+            $table->foreignId('barangay_id')->nullable()->constrained('barangays')->nullOnDelete();
 
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();

@@ -54,6 +54,25 @@ If you see errors related to `Browsershot` or `node` failing:
 
 - Ensure `php artisan reverb:start` is running if you need real-time updates.
 
+### Bataeno Pass 401 Unauthorized (Token Issue)
+
+If you get a 401 error during login, it's usually an OAuth mismatch.
+
+1. **Redirect URI**: In your `.env`, `BATAENO_REDIRECT_URI` must match **exactly** what is registered in the Bataeno Pass Developer Portal (including `http://` and the port).
+2. **Client Credentials**: Verify `BATAENO_PASS_CLIENT_ID` and `BATAENO_PASS_CLIENT_SECRET`.
+3. **Port Mismatch**: If you run on `localhost:8001` but your registered URI is `localhost:8000`, the token exchange will fail. Ensure your `APP_URL` and `php artisan serve` port match your portal settings.
+
+### cURL error 77 (SSL Issue)
+
+On Windows, PHP often can't find a valid SSL certificate bundle for API calls.
+
+1. Download `cacert.pem` from [curl.se/ca/cacert.pem](https://curl.se/ca/cacert.pem).
+2. Save it to your PHP folder.
+3. Edit `php.ini` and set:
+    - `curl.cainfo = "C:\path\to\cacert.pem"`
+    - `openssl.cafile = "C:\path\to\cacert.pem"`
+4. Restart your PHP server.
+
 ### Permission Denied
 
 - On Linux/Mac: Run `chmod -R 775 storage bootstrap/cache`.

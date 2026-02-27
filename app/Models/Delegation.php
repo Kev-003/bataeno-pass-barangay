@@ -16,6 +16,10 @@ class Delegation extends Model
         'expires_at'
     ];
 
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
+
     public function granterTerm()
     {
         return $this->belongsTo(BarangayTerm::class, 'granter_term_id');
@@ -24,5 +28,17 @@ class Delegation extends Model
     public function delegateTerm()
     {
         return $this->belongsTo(BarangayTerm::class, 'delegate_term_id');
+    }
+
+    public function barangay()
+    {
+        return $this->hasOneThrough(
+            Barangay::class,
+            BarangayTerm::class,
+            'id', // Foreign key on barangay_terms table...
+            'id', // Foreign key on barangays table...
+            'granter_term_id', // Local key on delegations table...
+            'barangay_id' // Local key on barangay_terms table...
+        );
     }
 }

@@ -40,7 +40,7 @@ class DocumentController extends Controller
         // We rely on the User model to set the correct Barangay ID context.
         $transaction = DocumentTransaction::create([
             'requester_id' => $requesterId,
-            'barangay_code' => Barangay::where('barangay_code', Barangay::normalizeCode(auth()->user()->barangay_code))->value('id'),
+            'barangay_id' => auth()->user()->getActiveBarangayId(),
             'document_type_id' => $validated['document_type_id'],
             'request_origin' => $validated['request_origin'],
             'status' => 'pending',
@@ -59,12 +59,12 @@ class DocumentController extends Controller
             $user = $request->user();
 
             // Resolve Barangay ID from PSGC code (normalize to 9rd-digit if needed)
-            $barangayId = Barangay::where('barangay_code', Barangay::normalizeCode($barangay_code))->value('id');
+            $barangayId = Barangay::where('barangay_code', $barangay_code)->value('id');
 
             // Fetch with a Row Lock
             // This prevents other requests from reading/modifying this specific row 
             // until this transaction completes.
-            $transaction = DocumentTransaction::where('barangay_code', $barangayId)
+            $transaction = DocumentTransaction::where('barangay_id', $barangayId)
                 ->lockForUpdate()
                 ->findOrFail($id);
 

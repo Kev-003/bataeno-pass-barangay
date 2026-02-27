@@ -29,7 +29,7 @@ class House extends Model
         return $this->belongsTo(Barangay::class, 'barangay_id');
     }
 
-    public function linkedBarangayByCode()
+    public function barangay()
     {
         return $this->belongsTo(Barangay::class, 'barangay_code', 'barangay_code');
     }

@@ -20,7 +20,7 @@ class DocumentTransaction extends Model
         'status',
         'request_origin',
         'requester_id',
-        'barangay_code',
+        'barangay_id',
         'purpose',
         'checksum',
         'file_path',
@@ -63,7 +63,7 @@ class DocumentTransaction extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class, 'barangay_code', 'id');
+        return $this->belongsTo(Barangay::class, 'barangay_id');
     }
 
     public function documentType()

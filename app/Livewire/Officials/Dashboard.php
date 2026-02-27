@@ -18,7 +18,7 @@ class Dashboard extends Component
 
     public function mount($barangay_code)
     {
-        $this->psgc_code = Barangay::normalizeCode($barangay_code);
+        $this->psgc_code = $barangay_code;
 
         $barangay = Barangay::where('barangay_code', $this->psgc_code)->firstOrFail();
         $this->barangay_id = $barangay->id;
@@ -32,17 +32,17 @@ class Dashboard extends Component
         $this->stats = [
             [
                 'title' => 'Total Residents',
-                'value' => User::where('barangay_code', $this->psgc_code)->count(),
+                'value' => User::where('barangay_id', $this->barangay_id)->count(),
                 'color' => 'blue'
             ],
             [
                 'title' => 'Total Requests',
-                'value' => DocumentTransaction::where('barangay_code', $this->barangay_id)->count(),
+                'value' => DocumentTransaction::where('barangay_id', $this->barangay_id)->count(),
                 'color' => 'green'
             ],
             [
                 'title' => 'Pending Requests',
-                'value' => DocumentTransaction::where('barangay_code', $this->barangay_id)
+                'value' => DocumentTransaction::where('barangay_id', $this->barangay_id)
                     ->where('status', 'pending')
                     ->count(),
                 'color' => 'red'
@@ -52,7 +52,7 @@ class Dashboard extends Component
     public function render()
     {
         return view('livewire.officials.dashboard', [
-            'transactions' => DocumentTransaction::where('barangay_code', $this->barangay_id)
+            'transactions' => DocumentTransaction::where('barangay_id', $this->barangay_id)
                 ->with(['requester', 'documentTypeProperty']) // Eager load for performance
                 ->latest()
                 ->paginate(5)

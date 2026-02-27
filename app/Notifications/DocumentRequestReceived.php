@@ -41,7 +41,7 @@ class DocumentRequestReceived extends Notification implements ShouldQueue
             ->greeting('Hello Official,')
             ->line('A new request for ' . $this->request->documentTypeProperty->name . ' has been received.')
             ->line('Requester: ' . $this->request->requester->first_name . ' ' . $this->request->requester->last_name)
-            ->action('View in Dashboard', route('official.dashboard', ['barangay_code' => $this->request->barangay_code]))
+            ->action('View in Dashboard', route('official.dashboard', ['barangay_code' => $this->request->barangay->barangay_code]))
             ->line('Please review this at your earliest convenience.');
     }
 

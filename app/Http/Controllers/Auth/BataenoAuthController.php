@@ -18,6 +18,9 @@ class BataenoAuthController extends Controller
         $state = Str::random(40);
         session()->put('oauth_state', $state);
 
+        // Use the URI configured in .env to ensure it matches the Bataan Portal
+        $registered_uri = config('services.bataeno.redirect');
+
         $params = [
             'client_id'     => config('services.bataeno.client_id'),
             'redirect_uri'  => config('services.bataeno.redirect'),
@@ -78,21 +81,31 @@ class BataenoAuthController extends Controller
         // Upsert local user — only identity fields, no token columns
         $user = User::firstOrNew(['email' => $raw['email'] ?? $govData['email'] ?? null]);
 
+        $egovMunicityCode = $govUserData['data']['municity_code'] ?? null;
+        $egovBarangayCode = $govUserData['data']['barangay_code'] ?? null;
+
+        $municityId = $egovMunicityCode ? (\App\Models\Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
+        $barangayId = $egovBarangayCode ? (\App\Models\Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
+
         $user->fill([
-            'uuid'           => $raw['uuid']          ?? $govData['uuid']        ?? null,
-            'first_name'     => $raw['first_name']    ?? $govData['first_name']  ?? null,
-            'middle_name'    => $raw['middle_name']   ?? $govData['middle_name'] ?? null,
-            'last_name'      => $raw['last_name']     ?? $govData['last_name']   ?? null,
-            'suffix'         => $raw['ext_name']      ?? null,
-            'date_of_birth'  => $raw['birthday']      ?? $govData['birthdate']   ?? null,
-            'place_of_birth' => $raw['birth_place']   ?? $govData['birth_place'] ?? null,
-            'gender'         => $raw['sex']            ?? $govData['sex']         ?? null,
-            'civil_status'   => $raw['civil_status']  ?? $govData['civil_status'] ?? null,
-            'municity_code'  => Barangay::normalizeCode($raw['municity_code']    ?? null),
-            'barangay_code'  => Barangay::normalizeCode($raw['barangay_code']    ?? null),
-            'municity_name'  => $raw['municity_name'] ?? null,
-            'barangay_name'  => $raw['barangay_name'] ?? null,
-            'egov_data'      => $raw['identities']    ?? $raw,
+            'uuid' => $govUserData['data']['uuid'] ?? null,
+            // Identity
+            'first_name' => $govUserData['data']['first_name'] ?? null,
+            'middle_name' => $govUserData['data']['middle_name'] ?? null,
+            'last_name' => $govUserData['data']['last_name'] ?? null,
+            'suffix' => $govUserData['data']['ext_name'] ?? null,
+
+            // Profile Details
+            'date_of_birth' => $govUserData['data']['birthday'] ?? null,
+            'place_of_birth' => $govUserData['data']['birth_place'] ?? null,
+            'gender' => $govUserData['data']['sex'] ?? null,
+            'civil_status' => $govUserData['data']['civil_status'] ?? null,
+
+            // Location IDs Lookups
+            'municity_id' => $municityId,
+            'barangay_id' => $barangayId,
+
+            'egov_data' => $govUserData['data']['identities'] ?? $govUserData['data'] ?? null,
         ]);
 
         if (! $user->exists) {
@@ -103,10 +116,14 @@ class BataenoAuthController extends Controller
         $user->save();
         Auth::login($user);
 
-        return match (true) {
-            $user->isAdmin()    => redirect('/admin'),
-            $user->isOfficial() => redirect('/official/' . $user->barangay_code),
-            default             => redirect('/dashboard'),
-        };
+        if ($user->isAdmin()) {
+            return redirect('/admin');
+        }
+
+        if ($user->isOfficial()) {
+            return redirect('/official/' . $user->barangay?->barangay_code);
+        }
+
+        return redirect('/dashboard');
     }
 }

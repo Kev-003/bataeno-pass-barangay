@@ -13,7 +13,6 @@ class FamilyFactory extends Factory
     {
         return [
             'family_name' => fake()->lastName(),
-            'clan_origin' => fake()->city(),
         ];
     }
 }

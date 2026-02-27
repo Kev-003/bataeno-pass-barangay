@@ -28,7 +28,7 @@ class DocumentRequestCreated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         // Use the PSGC code from the related barangay model
-        $psgc = $this->transaction->barangay->barangay_code ?? $this->transaction->barangay_code;
+        $psgc = $this->transaction->barangay->barangay_code;
         return [
             new PrivateChannel('barangay.' . $psgc . '.requests'),
         ];

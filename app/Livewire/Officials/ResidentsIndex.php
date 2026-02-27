@@ -21,10 +21,12 @@ class ResidentsIndex extends Component implements HasForms, HasTable
     use InteractsWithTable;
 
     public $barangay_code;
+    public $barangay_id;
 
     public function mount($barangay_code)
     {
-        $this->barangay_code = \App\Models\Barangay::normalizeCode($barangay_code);
+        $this->barangay_code = $barangay_code;
+        $this->barangay_id = \App\Models\Barangay::where('barangay_code', $this->barangay_code)->value('id');
     }
 
     public function table(Table $table): Table
@@ -33,7 +35,7 @@ class ResidentsIndex extends Component implements HasForms, HasTable
         $columns = array_diff(Schema::getColumnListing('users'), $excluded);
 
         return $table
-            ->query(User::query()->where('barangay_code', $this->barangay_code))
+            ->query(User::query()->where('barangay_id', $this->barangay_id))
             ->columns(
                 collect($columns)->map(function ($column) {
                     return TextColumn::make($column)

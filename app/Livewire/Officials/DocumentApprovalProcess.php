@@ -21,7 +21,7 @@ class DocumentApprovalProcess extends Component
     public function mount($barangay_code, $id, DocumentApprovalService $service)
     {
         // Normalize the PSGC code from URL
-        $this->barangay_code = \App\Models\Barangay::normalizeCode($barangay_code);
+        $this->barangay_code = $barangay_code;
 
         $this->pendingTransactions = DocumentTransaction::findOrFail($id);
         $this->transactionDetails = $service->getTransactionDetails($this->pendingTransactions);

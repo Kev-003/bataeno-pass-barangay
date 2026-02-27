@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PSGC Cloud</title>
+  <meta name="description"
+    content="Philippine Standard Geographic Code API - fast, structured geographic reference.">
+    <link rel="icon" type="image/png" href="https://psgc.cloud/favicon.ico">
+  <link rel="preload" as="style" href="https://psgc.cloud/build/assets/app-CH5gHicv.css" /><link rel="modulepreload" as="script" href="https://psgc.cloud/build/assets/app-Dq6ZVe58.js" /><link rel="stylesheet" href="https://psgc.cloud/build/assets/app-CH5gHicv.css" data-navigate-track="reload" /><script type="module" src="https://psgc.cloud/build/assets/app-Dq6ZVe58.js" data-navigate-track="reload"></script>  <!-- Livewire Styles --><style >[wire\:loading][wire\:loading], [wire\:loading\.delay][wire\:loading\.delay], [wire\:loading\.inline-block][wire\:loading\.inline-block], [wire\:loading\.inline][wire\:loading\.inline], [wire\:loading\.block][wire\:loading\.block], [wire\:loading\.flex][wire\:loading\.flex], [wire\:loading\.table][wire\:loading\.table], [wire\:loading\.grid][wire\:loading\.grid], [wire\:loading\.inline-flex][wire\:loading\.inline-flex] {display: none;}[wire\:loading\.delay\.none][wire\:loading\.delay\.none], [wire\:loading\.delay\.shortest][wire\:loading\.delay\.shortest], [wire\:loading\.delay\.shorter][wire\:loading\.delay\.shorter], [wire\:loading\.delay\.short][wire\:loading\.delay\.short], [wire\:loading\.delay\.default][wire\:loading\.delay\.default], [wire\:loading\.delay\.long][wire\:loading\.delay\.long], [wire\:loading\.delay\.longer][wire\:loading\.delay\.longer], [wire\:loading\.delay\.longest][wire\:loading\.delay\.longest] {display: none;}[wire\:offline][wire\:offline] {display: none;}[wire\:dirty]:not(textarea):not(input):not(select) {display: none;}:root {--livewire-progress-bar-color: #2299dd;}[x-cloak] {display: none !important;}[wire\:cloak] {display: none !important;}dialog#livewire-error::backdrop {background-color: rgba(0, 0, 0, .6);}</style>
+</head>
+
+<body class="antialiased font-sans text-gray-800">
+  <nav data-nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <a href="/" class="flex items-center gap-2 font-semibold text-primary-600">
+            <img src="https://psgc.cloud/images/logo-dark.png" alt="" srcset="" class="h-14">
+        </a>
+        <ul class="hidden md:flex gap-8 text-sm font-medium">
+                                    <li><a href="https://psgc.cloud"
+                    class="hover:text-primary-600 text-gray-700">Home</a></li>
+                        <li><a href="https://psgc.cloud/about"
+                    class="hover:text-primary-600 text-gray-700">About</a></li>
+                        <li><a href="https://psgc.cloud/api-docs"
+                    class="hover:text-primary-600 text-gray-700">API Docs</a></li>
+                        <li><a href="https://psgc.cloud/terms"
+                    class="hover:text-primary-600 text-gray-700">Terms</a></li>
+                        <li><a href="https://psgc.cloud/privacy"
+                    class="hover:text-primary-600 text-gray-700">Privacy</a></li>
+                    </ul>
+    </div>
+</nav>  <main class="min-h-[60vh]"><div class="max-w-3xl px-6 py-24 mx-auto space-y-8 text-center">
+    <h1 class="text-6xl font-extrabold tracking-tight text-primary-600">404</h1>
+    <p class="text-xl font-semibold">Page Not Found</p>
+    <p class="max-w-xl mx-auto text-gray-600">The page you're looking for doesn't exist, was moved, or never existed.
+        You
+        can head back to the homepage or explore the API documentation.</p>
+    <div class="flex flex-col justify-center gap-4 sm:flex-row">
+        <a href="https://psgc.cloud" class="btn-primary">Go Home</a>
+        <a href="https://psgc.cloud/api-docs"
+            class="bg-white border btn-outline text-primary-600 border-primary-200 hover:bg-primary-50">API Docs</a>
+    </div>
+    <div class="pt-8 text-xs text-gray-400">If you believe this is an error, contact the maintainer.</div>
+</div>
+ </main>
+  <footer class="bg-white border-t border-gray-200 mt-16 py-12 text-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-8 md:grid-cols-3">
+    <div>
+      <p class="font-semibold text-primary-600 mb-2">PSGC Cloud</p>
+      <p class="text-gray-600">Philippine Standard Geographic Code API reference & tools.</p>
+    </div>
+    <div>
+      <p class="font-semibold mb-2">Resources</p>
+      <ul class="space-y-1">
+        <li><a class="hover:text-primary-600" href="https://psgc.cloud/api-docs">API Docs</a></li>
+        <li><a class="hover:text-primary-600" href="https://psgc.cloud/about">About</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold mb-2">Legal</p>
+      <ul class="space-y-1">
+        <li><a class="hover:text-primary-600" href="https://psgc.cloud/terms">Terms</a></li>
+        <li><a class="hover:text-primary-600" href="https://psgc.cloud/privacy">Privacy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="mt-8 text-center text-gray-500">&copy; 2026 PSGC Cloud</div>
+</footer>  <script src="/livewire/livewire.min.js?id=61e33937"   data-csrf="" data-update-uri="/livewire/update" data-navigate-once="true"></script>
+  <script>
+    document.addEventListener('click', e => {
+            const btn = e.target.closest('[data-copy]');
+            if(!btn) return;
+            const pre = btn.previousElementSibling;
+            if(pre && pre.textContent){
+                navigator.clipboard.writeText(pre.textContent.trim());
+                const prev = btn.innerText;
+                btn.innerText = 'Copied!';
+                setTimeout(()=> btn.innerText = prev, 1500);
+            }
+        });
+        const nav = document.querySelector('[data-nav]');
+        if(nav){
+            const toggle = ()=> nav.classList.toggle('shadow-md', window.scrollY>10);
+            document.addEventListener('scroll', toggle, { passive:true });
+            toggle();
+        }
+  </script>
+</body>
+
+</html>

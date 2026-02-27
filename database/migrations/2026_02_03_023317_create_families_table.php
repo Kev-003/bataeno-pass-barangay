@@ -13,7 +13,8 @@ return new class extends Migration {
         Schema::create('families', function (Blueprint $table) {
             $table->id();
             $table->string('family_name');
-            $table->string('clan_origin')->nullable();
+            $table->foreignId('household_id')->nullable()->constrained()->cascadeOnDelete()->nullOnDelete();
+            $table->foreignId('barangay_id')->nullable()->constrained()->cascadeOnDelete()->nullOnDelete();
             $table->timestamps();
         });
     }

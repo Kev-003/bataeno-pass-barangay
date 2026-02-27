@@ -18,12 +18,14 @@ class OfficialManagement extends Component implements HasForms, HasTable
     use InteractsWithTable;
 
     public $barangay_code;
+    public $barangay_id;
     public $showDelegationModal = false;
     public $selectedDelegateId = null;
 
     public function mount($barangay_code)
     {
-        $this->barangay_code = \App\Models\Barangay::normalizeCode($barangay_code);
+        $this->barangay_code = $barangay_code;
+        $this->barangay_id = \App\Models\Barangay::where('barangay_code', $this->barangay_code)->value('id');
     }
 
     public function revoke($delegationId)
@@ -80,7 +82,7 @@ class OfficialManagement extends Component implements HasForms, HasTable
                 BarangayTerm::query()
                     ->join('users', 'barangay_terms.user_id', '=', 'users.id')
                     ->join('roles', 'barangay_terms.position_id', '=', 'roles.id')
-                    ->where('users.barangay_code', $this->barangay_code)
+                    ->where('users.barangay_id', $this->barangay_id)
                     // Select specific columns to avoid ID conflicts
                     ->select('barangay_terms.*', 'users.first_name', 'users.last_name', 'roles.name as role_name')
             )
@@ -93,9 +95,7 @@ class OfficialManagement extends Component implements HasForms, HasTable
     public function render()
     {
         $delegations = Delegation::whereHas('granterTerm', function ($query) {
-            $query->where('barangay_code', function ($sub) {
-                $sub->select('id')->from('barangays')->where('barangay_code', $this->barangay_code);
-            });
+            $query->where('barangay_id', $this->barangay_id);
         })
             ->where(function ($query) {
                 $query->whereNull('expires_at')
@@ -105,9 +105,7 @@ class OfficialManagement extends Component implements HasForms, HasTable
             ->get();
 
         // Get officials of the same barangay for delegation dropdown (excluding current user)
-        $potentialDelegates = BarangayTerm::where('barangay_code', function ($sub) {
-            $sub->select('id')->from('barangays')->where('barangay_code', $this->barangay_code);
-        })
+        $potentialDelegates = BarangayTerm::where('barangay_id', $this->barangay_id)
             ->where('user_id', '!=', auth()->id())
             ->where(function ($q) {
                 $q->whereNull('ended_at')->orWhere('ended_at', '>', now());
