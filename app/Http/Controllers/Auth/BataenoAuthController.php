@@ -69,43 +69,41 @@ class BataenoAuthController extends Controller
         // ✅ Cache the token — no DB column needed
         $bataeno->storeOfficialToken($accessToken);
 
-        // Fetch the user's profile from Bataeno
-        $govData = $bataeno->fetchAuthenticatedProfile($accessToken);
+            // Fetch the user's profile from Bataeno
+            $govData = $bataeno->fetchAuthenticatedProfile($accessToken);
+            $govUserData = $govData['data'] ?? $govData;
 
-        if (! $govData) {
-            return redirect('/login')->withErrors(['bataeno' => 'Could not fetch user profile.']);
-        }
+            if (! $govUserData) {
+                return redirect('/login')->withErrors(['bataeno' => 'Could not fetch user profile.']);
+            }
 
-        $raw = $govData['raw'] ?? [];
+        $user = User::firstOrNew(['email' => $govUserData['email'] ?? null]);
 
-        // Upsert local user — only identity fields, no token columns
-        $user = User::firstOrNew(['email' => $raw['email'] ?? $govData['email'] ?? null]);
-
-        $egovMunicityCode = $govUserData['data']['municity_code'] ?? null;
-        $egovBarangayCode = $govUserData['data']['barangay_code'] ?? null;
-
+        $egovMunicityCode = $govUserData['municity_code'] ?? null;
+        $egovBarangayCode = $govUserData['barangay_code'] ?? null;
+        $dateOfBirth = $govUserData['birthdate'] ?? $govUserData['dob'] ?? null;
         $municityId = $egovMunicityCode ? (\App\Models\Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
         $barangayId = $egovBarangayCode ? (\App\Models\Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
 
         $user->fill([
-            'uuid' => $govUserData['data']['uuid'] ?? null,
+            'uuid' => $govUserData['uuid'] ?? null,
             // Identity
-            'first_name' => $govUserData['data']['first_name'] ?? null,
-            'middle_name' => $govUserData['data']['middle_name'] ?? null,
-            'last_name' => $govUserData['data']['last_name'] ?? null,
-            'suffix' => $govUserData['data']['ext_name'] ?? null,
+            'first_name' => $govUserData['first_name'] ?? null,
+            'middle_name' => $govUserData['middle_name'] ?? null,
+            'last_name' => $govUserData['last_name'] ?? null,
+            'suffix' => $govUserData['ext_name'] ?? null,
 
             // Profile Details
-            'date_of_birth' => $govUserData['data']['birthday'] ?? null,
-            'place_of_birth' => $govUserData['data']['birth_place'] ?? null,
-            'gender' => $govUserData['data']['sex'] ?? null,
-            'civil_status' => $govUserData['data']['civil_status'] ?? null,
+            'date_of_birth' => $govUserData['birthday'] ?? $govUserData['birthdate'] ?? $govUserData['dob'] ?? null,
+            'place_of_birth' => $govUserData['birth_place'] ?? null,
+            'gender' => $govUserData['sex'] ?? null,
+            'civil_status' => $govUserData['civil_status'] ?? null,
 
             // Location IDs Lookups
             'municity_id' => $municityId,
             'barangay_id' => $barangayId,
 
-            'egov_data' => $govUserData['data']['identities'] ?? $govUserData['data'] ?? null,
+            'egov_data' => $govUserData['identities'] ?? $govUserData ?? null,
         ]);
 
         if (! $user->exists) {

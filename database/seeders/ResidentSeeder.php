@@ -63,6 +63,32 @@ class ResidentSeeder extends Seeder
             }
         }
 
+        // Add Princess Mary Bitua Amianit (Pilar, Kaparangan)
+        $pilar = DB::table('municipalities')->where('name', 'Pilar')->first();
+        $kaparangan = DB::table('barangays')->where('name', 'Kaparangan')->where('municity_code', $pilar ? $pilar->id : null)->first();
+        if ($pilar && $kaparangan) {
+            User::create([
+                'uuid' => '8421ece2-a06b-45da-9f74-cbf9affa3f90',
+                'first_name' => 'PRINCESS MARY',
+                'middle_name' => 'BITUA',
+                'last_name' => 'AMIANIT',
+                'date_of_birth' => '2010-12-02',
+                'place_of_birth' => '-',
+                'gender' => 'FEMALE',
+                'civil_status' => 'SINGLE',
+                'barangay_id' => $kaparangan->id,
+                'municity_id' => $pilar->id,
+                'email' => 'princessmarybituaamianit_20101202@1bataan.gov.ph',
+                'password' => '$2y$12$vFfrB9YgTmJF999S/FAhieaAbcUYNjF55w7QDGXfFm6...', // Use a real hash or Hash::make
+                'email_verified_at' => '2026-02-27 02:37:07',
+                'created_at' => '2026-02-27 02:37:07',
+                'updated_at' => '2026-02-27 02:37:07',
+            ]);
+            $this->command->info('Added Princess Mary Bitua Amianit to residents.');
+        } else {
+            $this->command->warn('Could not add Princess Mary Bitua Amianit: Pilar/Kaparangan not found.');
+        }
+
         $this->command->info('Resident seeding completed.');
     }
 }
