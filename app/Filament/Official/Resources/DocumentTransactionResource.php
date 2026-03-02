@@ -170,7 +170,7 @@ class DocumentTransactionResource extends Resource
     {
         return [
             'index' => Pages\ListDocumentTransactions::route('/'),
-            'walk-in' => Pages\EmptyPage::route('/walk-in'),
+            'walk-in' => Pages\WalkInRequest::route('/walk-in'),
         ];
     }
 
