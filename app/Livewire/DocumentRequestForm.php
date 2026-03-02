@@ -29,6 +29,24 @@ class DocumentRequestForm extends Component
     // When embedded into another page, set this to true to avoid applying a full-page layout
     public bool $embedded = false;
 
+    public bool $isFilament = false; // To toggle the UI style
+    public $initialDocId = null;
+
+    public function mount($embedded = false, $isFilament = false, $initialDocId = null, $targetResident = null)
+    {
+        $this->embedded = $embedded;
+        $this->isFilament = $isFilament;
+
+        if ($initialDocId) {
+            $this->setDoc($initialDocId);
+        }
+
+        if ($targetResident) {
+            $this->targetResident = $targetResident;
+            $this->onNfcUid(null, $targetResident);
+        }
+    }
+
 
     public function updatedPurpose()
     {
@@ -52,7 +70,7 @@ class DocumentRequestForm extends Component
         }
 
         // If $resident was passed as non-array (legacy), normalize it
-        if (! is_array($resident)) {
+        if (!is_array($resident)) {
             $resident = (array) $resident;
         }
 
@@ -61,7 +79,8 @@ class DocumentRequestForm extends Component
             $uid = $resident['uid'];
         }
 
-        if (! $resident) return;
+        if (!$resident)
+            return;
 
         $this->targetResident = $resident;
 
@@ -180,11 +199,11 @@ class DocumentRequestForm extends Component
                 if ($uuid) {
                     $found = User::where('uuid', $uuid)->first();
                 }
-                if (! $found && $email) {
+                if (!$found && $email) {
                     $found = User::where('email', $email)->first();
                 }
 
-                if (! $found) {
+                if (!$found) {
                     // Create a minimal resident record so we can associate the request
                     $found = User::create([
                         'uuid' => $uuid,
@@ -216,6 +235,11 @@ class DocumentRequestForm extends Component
             );
 
             session()->flash('success', 'Your request has been submitted successfully.');
+            if ($this->isFilament) {
+                $this->dispatch('walkin:success');
+                return; // Don't redirect the official to the resident dashboard!
+            }
+
             return redirect()->route('dashboard');
 
         } catch (\Exception $e) {

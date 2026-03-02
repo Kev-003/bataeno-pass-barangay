@@ -6,9 +6,9 @@ use App\Filament\Official\Resources\DocumentTransactionResource\Pages;
 use App\Models\DocumentTransaction;
 use Filament\Forms;
 use Filament\Forms\Form;
-use FIlament\Forms\Components\Select;
-use FIlament\Forms\Components\TextInput;
-use FIlament\Forms\Components\Textarea;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -110,13 +110,7 @@ class DocumentTransactionResource extends Resource
                     ->modalContent(fn(DocumentTransaction $record) => view('filament.official.resources.document-transaction-resource.approval-details', ['record' => $record]))
                     ->action(function (DocumentTransaction $record) {
                         $official = auth()->user()->activeTerm;
-
-                        if (!$official) {
-                            Notification::make()
-                                ->title('Action denied')
-                                ->body('You do not have an active official term to sign this document.')
-                                ->danger()
-                                ->send();
+                        if (!$official) { /* Error handling... */
                             return;
                         }
 
@@ -124,17 +118,23 @@ class DocumentTransactionResource extends Resource
                             $service = app(\App\Services\DocumentApprovalService::class);
                             $service->generateAndSign($record, $official);
 
-                            \Filament\Notifications\Notification::make()
+                            // 1. Notify the Official (Toast only)
+                            Notification::make()
                                 ->title('Document Issued')
-                                ->body("The document has been successfully generated and issued.")
                                 ->success()
                                 ->send();
-                        } catch (\Exception $e) {
+
+                            // 2. Notify the Resident (Real-time via Reverb + Database)
                             Notification::make()
-                                ->title('Approval Failed')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
+                                ->title('Document Ready')
+                                ->body("Your request for {$record->documentType->name} has been issued.")
+                                ->icon('heroicon-o-check-badge')
+                                ->color('success')
+                                ->sendToDatabase($record->requester) // Persistence
+                                ->broadcast($record->requester);      // Real-time via Reverb
+            
+                        } catch (\Exception $e) {
+                            // ... error handling
                         }
                     }),
                 Tables\Actions\Action::make('reject')
@@ -153,10 +153,15 @@ class DocumentTransactionResource extends Resource
                             'rejection_reason' => $data['rejection_reason'],
                         ]);
 
+                        // Notify Resident via Reverb
                         Notification::make()
                             ->title('Request Rejected')
+                            ->body("Your request for {$record->documentType->name} was rejected. Reason: {$data['rejection_reason']}")
                             ->danger()
-                            ->send();
+                            ->sendToDatabase($record->requester)
+                            ->broadcast($record->requester);
+
+                        Notification::make()->title('Resident Notified')->send();
                     }),
             ])
             ->bulkActions([

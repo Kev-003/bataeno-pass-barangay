@@ -4,10 +4,11 @@ namespace App\Services;
 
 use App\Models\DocumentTransaction;
 use App\Models\User;
-use App\Notifications\DocumentRequestReceived;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
+use Filament\Notifications\Notification;
+use Filament\Notifications\Actions\Action;
 use App\Models\Barangay;
+
 
 class DocumentRequestService
 {
@@ -36,13 +37,58 @@ class DocumentRequestService
 
     protected function notifyOfficials($transaction)
     {
-        // For notification, officialsForBarangay scope takes a string PSGC.
         $officials = User::officialsForBarangay($transaction->barangay->barangay_code)->get();
 
-        if ($officials->count() > 0) {
-            Notification::send($officials, new DocumentRequestReceived($transaction));
+        \Log::info('Notifying officials', [
+            'count' => $officials->count(),
+            'ids' => $officials->pluck('id'),
+        ]);
 
+        if ($officials->isEmpty())
+            return;
 
+        // 1. Notify officials
+        foreach ($officials as $official) {
+            Notification::make()
+                ->title('New Document Request')
+                ->body(
+                    ($transaction->requester->name ?? 'Resident') .
+                    ' requested a ' .
+                    ($transaction->documentType->name ?? 'Document')
+                )
+                ->icon('heroicon-o-document-text')
+                ->warning()
+                ->actions([
+                    Action::make('view')
+                        ->label('View Request')
+                        ->url(route('filament.official.resources.document-transactions.index', [
+                            'tenant' => $transaction->barangay->barangay_code,
+                        ]))
+                        ->markAsRead(),
+                ])
+                ->sendToDatabase($official)
+                ->broadcast($official);
         }
+
+        // 2. Notify resident — also uses Filament's Notification, not Laravel's facade
+        Notification::make()
+            ->title('Document Request Sent')
+            ->body(
+                'Your request for ' .
+                ($transaction->documentType->name ?? 'Document') .
+                ' has been received.'
+            )
+            ->icon('heroicon-o-document-text')
+            ->warning()
+            ->actions([
+                Action::make('view')
+                    ->label('View Request')
+                    ->url(route('filament.resident.resources.document-transactions.index', [
+                        'tenant' => $transaction->barangay->barangay_code,
+                    ]))
+                    ->markAsRead(),
+            ])
+            ->sendToDatabase($transaction->requester)
+            ->broadcast($transaction->requester);
     }
 }

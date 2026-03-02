@@ -16,10 +16,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use App\Notifications\DocumentRequestReceived;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Broadcasting\InteractsWithSockets;
+
 
 class User extends Authenticatable implements FilamentUser, HasName, HasTenants
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, InteractsWithSockets;
 
     /**
      * The attributes that are mass assignable.

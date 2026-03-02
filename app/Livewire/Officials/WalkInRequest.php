@@ -7,15 +7,18 @@ use App\Services\BataenoService;
 use App\Services\DocumentRequestService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Livewire\Component;
-use Livewire\Attributes\On; // <-- Required for Livewire 3!
+use Livewire\Attributes\On;
+use Filament\Notifications\Notification;
 
 class WalkInRequest extends Component
 {
     public int $step = 1;
 
-    public string  $document_type = '';
-    public string  $purpose       = '';
+    public string $document_type = '';
+    public string $purpose = '';
 
     public bool    $connected  = false;
     public ?string $uid        = null;
@@ -26,7 +29,7 @@ class WalkInRequest extends Component
     
     // Step 4: Editable document fields
     public array   $documentFields = [];
-    public bool    $isEditingFields = false;
+    public array   $documentFieldLabels = [];
 
     // ── Step 1 actions ────────────────────────────────────────────────────────
 
@@ -34,24 +37,27 @@ class WalkInRequest extends Component
     {
         $this->validate([
             'document_type' => 'required|exists:document_type_properties,id',
-            'purpose'       => 'required|string|min:5',
+            'purpose' => 'required|string|min:5',
         ]);
 
         $this->step = 2;
-        $this->uid      = null;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
         $this->showCardConfirmationModal = false;
+        $this->initializeDocumentFields();
     }
 
     public function backToDocumentSelect(): void
     {
-        $this->step     = 1;
-        $this->uid      = null;
+        $this->step = 1;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
         $this->loading  = false;
         $this->showCardConfirmationModal = false;
+        $this->documentFields = [];
+        $this->documentFieldLabels = [];
     }
 
     // ── NFC event handlers (only active on Step 2) ────────────────────────────
@@ -71,9 +77,10 @@ class WalkInRequest extends Component
     #[On('nfc:cardUid')]
     public function onCardUid($uid = null): void
     {
-        if ($this->step !== 2) return;
+        if ($this->step !== 2)
+            return;
 
-        $this->uid      = $uid;
+        $this->uid = $uid;
         $this->resident = null;
         $this->nfcError = null;
         $this->showCardConfirmationModal = false;
@@ -82,10 +89,11 @@ class WalkInRequest extends Component
     #[On('nfc:verifiedUid')]
     public function onVerifiedUid($uid = null): void
     {
-        if ($this->step !== 2) return;
+        if ($this->step !== 2)
+            return;
 
-        $this->uid      = $uid;
-        $this->loading  = true;
+        $this->uid = $uid;
+        $this->loading = true;
         $this->nfcError = null;
         $this->resident = null;
         $this->showCardConfirmationModal = false;
@@ -97,7 +105,7 @@ class WalkInRequest extends Component
                 $this->resident = $resident;
                 // Auto-fill document fields from resident data
                 $this->populateDocumentFields($resident);
-                $this->showCardConfirmationModal = true;
+                $this->step = 3;
                 Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
                 $this->nfcError = 'This card is not registered at this barangay. The resident must log in first to register.';
@@ -115,11 +123,13 @@ class WalkInRequest extends Component
     public function onCardRemoved(): void
     {
         if ($this->step === 2) {
-            $this->uid      = null;
+            $this->uid = null;
             $this->resident = null;
             $this->nfcError = null;
             $this->loading  = false;
             $this->showCardConfirmationModal = false;
+            $this->documentFields = [];
+            $this->documentFieldLabels = [];
         }
     }
 
@@ -127,14 +137,14 @@ class WalkInRequest extends Component
 
     public function backToScan(): void
     {
-        $this->step     = 2;
-        $this->uid      = null;
+        $this->step = 2;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
         $this->showCardConfirmationModal = false;
     }
 
-    public function confirmResidentLookup(): void
+    public function openSubmitConfirmation(): void
     {
         if (! $this->resident) {
             $this->nfcError = 'No verified resident details found.';
@@ -142,47 +152,106 @@ class WalkInRequest extends Component
             return;
         }
 
-        $this->showCardConfirmationModal = false;
-        $this->step = 3;
+        $this->showCardConfirmationModal = true;
     }
 
-    public function cancelResidentLookup(): void
+    public function closeSubmitConfirmation(): void
     {
         $this->showCardConfirmationModal = false;
-        $this->resident = null;
-        $this->uid = null;
-        $this->documentFields = [];
     }
 
     // ── Step 3/4: Document field management ────────────────────────────────
 
     public function populateDocumentFields($resident): void
     {
-        // Auto-fill with resident data - map resident fields to common document fields
-        $this->documentFields = [
-            'first_name'    => $resident['first_name'] ?? '',
-            'middle_name'   => $resident['middle_name'] ?? '',
-            'last_name'     => $resident['last_name'] ?? '',
-            'date_of_birth' => $resident['birthdate'] ?? $resident['birthdate_formal'] ?? '',
-            'sex'           => $resident['sex'] ?? '',
-            'civil_status'  => $resident['civil_status'] ?? '',
-            'contact_number' => $resident['contact_number'] ?? '',
-            'address'       => $resident['address'] ?? '',
-            'birthplace'    => $resident['birth_place'] ?? '',
+        if (empty($this->documentFields)) {
+            $this->initializeDocumentFields();
+        }
+
+        if (empty($this->documentFields)) {
+            return;
+        }
+
+        $fullName = trim(($resident['first_name'] ?? '') . ' ' . ($resident['middle_name'] ?? '') . ' ' . ($resident['last_name'] ?? ''));
+
+        $map = [
+            'first_name' => ['first_name'],
+            'middle_name' => ['middle_name'],
+            'last_name' => ['last_name'],
+            'name' => ['name'],
+            'date_of_birth' => ['birthdate', 'birthdate_formal'],
+            'dob' => ['birthdate', 'birthdate_formal'],
+            'sex' => ['sex'],
+            'gender' => ['sex'],
+            'civil_status' => ['civil_status'],
+            'contact_number' => ['contact_number'],
+            'mobile_number' => ['contact_number'],
+            'phone_number' => ['contact_number'],
+            'address' => ['address'],
+            'birthplace' => ['birth_place'],
+            'place_of_birth' => ['birth_place'],
+            'email' => ['email'],
         ];
+
+        if ($fullName !== '') {
+            $map['full_name'] = ['name'];
+        }
+
+        foreach ($this->documentFields as $field => $value) {
+            if (!array_key_exists($field, $map)) {
+                continue;
+            }
+
+            foreach ($map[$field] as $source) {
+                if (is_string($source) && array_key_exists($source, $resident) && filled($resident[$source])) {
+                    $this->documentFields[$field] = (string) $resident[$source];
+                    break;
+                }
+            }
+
+            if ($field === 'full_name' && blank($this->documentFields[$field]) && $fullName !== '') {
+                $this->documentFields[$field] = $fullName;
+            }
+        }
     }
 
-    public function toggleEditMode(): void
+    public function initializeDocumentFields(): void
     {
-        $this->isEditingFields = !$this->isEditingFields;
-    }
+        $this->documentFields = [];
+        $this->documentFieldLabels = [];
 
-    public function confirmAndProceed(): void
-    {
-        // Move to step 4 if editing, or proceed with submission
-        if ($this->isEditingFields) {
-            // User confirmed edits, reset mode
-            $this->isEditingFields = false;
+        if (!$this->document_type) {
+            return;
+        }
+
+        $modelClass = DB::table('document_type_properties')
+            ->where('id', $this->document_type)
+            ->value('doc_type_model');
+
+        if (!$modelClass) {
+            return;
+        }
+
+        if (!str_contains($modelClass, '\\')) {
+            $modelClass = "App\\Models\\{$modelClass}";
+        }
+
+        if (!class_exists($modelClass)) {
+            Log::warning('WalkIn: document model class does not exist', ['modelClass' => $modelClass]);
+            return;
+        }
+
+        $instance = new $modelClass;
+        $columns = Schema::getColumnListing($instance->getTable());
+        $excluded = ['id', 'created_at', 'updated_at', 'transaction_id'];
+
+        foreach ($columns as $column) {
+            if (in_array($column, $excluded, true)) {
+                continue;
+            }
+
+            $this->documentFields[$column] = '';
+            $this->documentFieldLabels[$column] = Str::headline($column);
         }
     }
 
@@ -192,13 +261,14 @@ class WalkInRequest extends Component
     {
         return strtoupper(
             substr($this->resident['first_name'] ?? '', 0, 1) .
-            substr($this->resident['last_name']  ?? '', 0, 1)
+            substr($this->resident['last_name'] ?? '', 0, 1)
         ) ?: '?';
     }
 
     public function getSelectedDocumentName(): string
     {
-        if (! $this->document_type) return '';
+        if (!$this->document_type)
+            return '';
         return DB::table('document_type_properties')
             ->where('id', $this->document_type)
             ->value('name') ?? '';
@@ -208,16 +278,24 @@ class WalkInRequest extends Component
 
     public function submit(DocumentRequestService $service): void
     {
-        $this->validate([
-            'uid'           => 'required|string',
+        $this->showCardConfirmationModal = false;
+
+        $rules = [
+            'uid' => 'required|string',
             'document_type' => 'required|exists:document_type_properties,id',
-            'purpose'       => 'required|string|min:5',
-        ]);
+            'purpose' => 'required|string|min:5',
+        ];
+
+        foreach (array_keys($this->documentFields) as $field) {
+            $rules["documentFields.{$field}"] = 'required';
+        }
+
+        $this->validate($rules);
 
         $user = User::where('uuid', $this->uid)->first();
 
-        if (! $user) {
-            $this->nfcError = 'Resident not found in the local database.';
+        if (!$user) {
+            Notification::make()->title('Resident Not Found')->danger()->send();
             return;
         }
 
@@ -236,18 +314,15 @@ class WalkInRequest extends Component
 
             if ($transaction) {
                 $this->dispatch('walkin:success', transaction_id: $transaction->id);
-                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading', 'documentFields', 'isEditingFields', 'showCardConfirmationModal']);
+                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading', 'documentFields', 'documentFieldLabels', 'showCardConfirmationModal']);
                 $this->step = 1;
-            } else {
-                $this->dispatch('walkin:error', message: 'Failed to create request.');
             }
         } catch (\Exception $e) {
-            Log::error('WalkIn submission failed: ' . $e->getMessage());
-            $this->dispatch('walkin:error', message: 'System error: ' . $e->getMessage());
+            Notification::make()->title('System Error')->body($e->getMessage())->danger()->send();
         }
     }
 
-    
+
 
     public function render()
     {
