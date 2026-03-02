@@ -22,6 +22,10 @@ class WalkInRequest extends Component
     public ?array  $resident   = null;
     public bool    $loading    = false;
     public ?string $nfcError   = null;
+    
+    // Step 4: Editable document fields
+    public array   $documentFields = [];
+    public bool    $isEditingFields = false;
 
     // ── Step 1 actions ────────────────────────────────────────────────────────
 
@@ -86,6 +90,8 @@ class WalkInRequest extends Component
 
             if ($resident) {
                 $this->resident = $resident;
+                // Auto-fill document fields from resident data
+                $this->populateDocumentFields($resident);
                 $this->step     = 3; 
                 Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
@@ -133,6 +139,38 @@ class WalkInRequest extends Component
         $this->nfcError = null;
     }
 
+    // ── Step 3/4: Document field management ────────────────────────────────
+
+    public function populateDocumentFields($resident): void
+    {
+        // Auto-fill with resident data - map resident fields to common document fields
+        $this->documentFields = [
+            'first_name'    => $resident['first_name'] ?? '',
+            'middle_name'   => $resident['middle_name'] ?? '',
+            'last_name'     => $resident['last_name'] ?? '',
+            'date_of_birth' => $resident['birthdate'] ?? $resident['birthdate_formal'] ?? '',
+            'sex'           => $resident['sex'] ?? '',
+            'civil_status'  => $resident['civil_status'] ?? '',
+            'contact_number' => $resident['contact_number'] ?? '',
+            'address'       => $resident['address'] ?? '',
+            'birthplace'    => $resident['birth_place'] ?? '',
+        ];
+    }
+
+    public function toggleEditMode(): void
+    {
+        $this->isEditingFields = !$this->isEditingFields;
+    }
+
+    public function confirmAndProceed(): void
+    {
+        // Move to step 4 if editing, or proceed with submission
+        if ($this->isEditingFields) {
+            // User confirmed edits, reset mode
+            $this->isEditingFields = false;
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function getInitials(): string
@@ -178,12 +216,12 @@ class WalkInRequest extends Component
                 docTypeId: $this->document_type,
                 modelClass: $modelClass,
                 purpose: $this->purpose,
-                dynamicFields: []
+                dynamicFields: $this->documentFields // Pass the editable fields
             );
 
             if ($transaction) {
                 $this->dispatch('walkin:success', transaction_id: $transaction->id);
-                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading']);
+                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading', 'documentFields', 'isEditingFields']);
                 $this->step = 1;
             } else {
                 $this->dispatch('walkin:error', message: 'Failed to create request.');

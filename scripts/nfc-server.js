@@ -1,9 +1,10 @@
 import http from 'http';
 import { Server } from 'socket.io';
+import { NFC } from 'nfc-pcsc';
 
 const PORT = process.env.NFC_PORT || 8001;
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
   // Minimal POST /emit support for testing when running in mock mode
   if (req.method === 'POST' && req.url === '/emit') {
     let body = '';
@@ -13,19 +14,30 @@ const server = http.createServer(async (req, res) => {
         const json = JSON.parse(body);
         const uid = json.uid || json.data?.uid;
         if (uid) {
+          console.log('[API] /emit received UID:', uid);
           io.emit('verified_uid', uid);
           io.emit('verified-user-detail', uid);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, uid }));
           return;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[API] /emit parse error:', e.message);
+      }
       res.writeHead(400);
       res.end(JSON.stringify({ ok: false }));
     });
     return;
   }
-  // simple status
+  
+  // GET /status for debugging
+  if (req.method === 'GET' && req.url === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, running: true, port: PORT, nfcMode: global.nfcMode || 'unknown', timestamp: Date.now() }));
+    return;
+  }
+  
+  // simple status for root
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ ok: true, now: Date.now() }));
 });
@@ -33,59 +45,86 @@ const server = http.createServer(async (req, res) => {
 const io = new Server(server, { cors: { origin: '*' } });
 
 io.on('connection', (socket) => {
-  console.log('Client connected', socket.id);
+  console.log('[Socket.io] Client connected:', socket.id);
+  socket.emit('nfc:status', { connected: true, mode: global.nfcMode, timestamp: Date.now() });
 });
 
-let usedNative = false;
-try {
-  // Try dynamic import of native dependency. If not present, run mock mode.
-  const mod = await import('nfc-pcsc');
-  const { NFC } = mod;
-  if (typeof NFC === 'function') {
-    usedNative = true;
+// Initialize NFC with real hardware support
+(async () => {
+  let nfcActive = false;
+  global.nfcMode = 'initializing';
+
+  try {
+    console.log('[NFC] Initializing NFC PCSC reader...');
     const nfc = new NFC();
-
+    
     nfc.on('reader', (reader) => {
-      console.log(`${reader.reader.name} device attached`);
-
+      console.log(`[NFC] ✓ Reader detected: ${reader.name}`);
+      
       reader.on('card', (card) => {
-  const uid = card.uid || (card.atr && card.atr.toString('hex')) || null;
-  if (uid) {
-    io.emit('card-uid', uid);
-    io.emit('verified_uid', uid);        // ← add this
-    io.emit('verified-user-detail', uid); // ← and this (blade listens to both)
-  }
-});
+        const uid = card.uid || (card.data && card.data.uid) || card.id;
+        if (uid) {
+          console.log(`[NFC] ✓ Card detected on ${reader.name}`);
+          console.log(`[NFC] ✓ Card UID: ${uid}`);
+          console.log(`[NFC] ℹ Card type: ${card.type || 'Unknown'}`);
+          
+          // Emit to all connected Socket.io clients
+          io.emit('card-uid', uid);
+          io.emit('verified_uid', uid);
+          io.emit('verified-user-detail', uid);
+          console.log('[NFC] ✓ UID emitted to all connected clients');
+        } else {
+          console.warn('[NFC] ⚠ Card detected but UID not found');
+        }
+      });
 
-      reader.on('card.off', (card) => {
-        console.log('Card removed', card);
-        io.emit('card-removed');
+      reader.on('card.off', () => {
+        console.log(`[NFC] ℹ Card removed from ${reader.name}`);
       });
 
       reader.on('error', (err) => {
-        console.error('Reader error', err);
+        // ISO 14443-4 AID error is expected and can be ignored for UID reading
+        if (err.message && err.message.includes('AID was not set')) {
+          console.log(`[NFC] ℹ ISO 14443-4 tag (AID not required for UID reading)`);
+        } else {
+          console.error(`[NFC] ✗ Reader error (${reader.name}):`, err.message);
+        }
       });
 
       reader.on('end', () => {
-        console.log(`${reader.reader.name} device removed`);
+        console.log(`[NFC] ℹ Reader disconnected: ${reader.name}`);
       });
     });
 
     nfc.on('error', (err) => {
-      console.error('NFC error', err);
+      console.error('[NFC] ✗ NFC Error:', err.message);
     });
-  }
-} catch (err) {
-  console.warn('nfc-pcsc not available; running in mock mode. Install nfc-pcsc for real readers.');
-}
 
-// If native wasn't used, emit a sample UID periodically to help testing clients.
-if (!usedNative) {
-  // Only emit sample UID when explicitly requested via POST /emit, not on interval
-  // Remove interval-based emission to avoid repeated UID events
-}
+    nfc.on('end', () => {
+      console.log('[NFC] ℹ NFC service ended');
+    });
+
+    console.log('[NFC] ✓ NFC service initialized - REAL mode active');
+    nfcActive = true;
+    global.nfcMode = 'real';
+    console.log('[NFC] ✓ Waiting for NFC readers to be connected...');
+
+  } catch (err) {
+    console.warn('[NFC] ⚠ NFC initialization issue:', err.message || err);
+    console.log('[NFC] - Error code:', err.code);
+    console.log('[NFC] - Error type:', err.constructor.name);
+    console.log('[NFC] ℹ Falling back to MOCK mode');
+    console.log('[NFC] ℹ Use POST /emit to simulate card taps for testing');
+    global.nfcMode = 'mock';
+  }
+})();
 
 server.listen(PORT, () => {
-  console.log(`NFC socket server listening on http://127.0.0.1:${PORT}`);
-  if (!usedNative) console.log('Mock mode: emitting sample UID every 20s.');
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`NFC Server listening on http://127.0.0.1:${PORT}`);
+  console.log(`${'='.repeat(70)}`);
+  console.log('\nDEBUG COMMANDS:');
+  console.log('  Status: curl http://127.0.0.1:8001/status');
+  console.log('  Mock UID: curl -X POST http://127.0.0.1:8001/emit -H "Content-Type: application/json" -d \'{"uid":"8421ece2-a06b-45da-9f74-cbf9affa3f90"}\'');
+  console.log('\nServer is ready to receive Socket.io connections.\n');
 });

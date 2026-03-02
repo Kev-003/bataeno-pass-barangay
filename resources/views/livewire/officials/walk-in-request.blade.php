@@ -6,7 +6,7 @@
             @foreach([
                 [1, 'Select Document'],
                 [2, 'Scan Card'],
-                [3, 'Confirm & Submit'],
+                [3, 'Review Details'],
             ] as [$num, $label])
                 <div class="flex items-center {{ ! $loop->first ? 'flex-1' : '' }}">
                     @if(! $loop->first)
@@ -194,6 +194,45 @@
                     <div class="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
                         <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Purpose</span>
                         <p class="text-gray-700 mt-0.5">{{ $purpose }}</p>
+                    </div>
+
+                    {{-- Editable Document Fields Section --}}
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-semibold text-gray-800">Document Details</h3>
+                            <button wire:click="toggleEditMode"
+                                    class="text-xs px-3 py-1.5 rounded-lg {{ $isEditingFields ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }} font-medium transition">
+                                {{ $isEditingFields ? 'Done Editing' : 'Edit Fields' }}
+                            </button>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-4 bg-white">
+                            @if(!$isEditingFields)
+                                {{-- View Mode: Show auto-filled fields --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @foreach(['first_name' => 'First Name', 'middle_name' => 'Middle Name', 'last_name' => 'Last Name', 'date_of_birth' => 'Date of Birth', 'sex' => 'Sex', 'civil_status' => 'Civil Status', 'contact_number' => 'Contact Number', 'address' => 'Address', 'birthplace' => 'Birthplace'] as $field => $label)
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">{{ $label }}</label>
+                                            <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+                                                {{ $documentFields[$field] ?? '—' }}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                {{-- Edit Mode: Show editable fields --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @foreach(['first_name' => 'First Name', 'middle_name' => 'Middle Name', 'last_name' => 'Last Name', 'date_of_birth' => 'Date of Birth', 'sex' => 'Sex', 'civil_status' => 'Civil Status', 'contact_number' => 'Contact Number', 'address' => 'Address', 'birthplace' => 'Birthplace'] as $field => $label)
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">{{ $label }}</label>
+                                            <input wire:model="documentFields.{{ $field }}"
+                                                   type="text"
+                                                   class="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Action buttons --}}
