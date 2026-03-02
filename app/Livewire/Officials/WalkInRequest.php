@@ -117,18 +117,6 @@ class WalkInRequest extends Component
         }
     }
 
-    #[On('nfc:fakeResident')]
-    public function onFakeResident($uid = null, $resident = null): void
-    {
-        if ($this->step !== 2) return;
-
-        $this->uid      = $uid;
-        $this->resident = $resident;
-        $this->nfcError = null;
-        $this->loading  = false;
-        $this->step     = 3;
-    }
-
     // ── Step 3: go back to re-tap ─────────────────────────────────────────────
 
     public function backToScan(): void

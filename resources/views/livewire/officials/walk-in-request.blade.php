@@ -264,57 +264,14 @@
     </div>
 
     {{-- NFC socket bridge handled by <livewire:officials.nfc-listener /> --}}
-    
+
     <script>
-        // Listen for the scanner shouting that a card was tapped AND data was found
-        window.addEventListener('nfc:owner', (e) => {
-            const uid = e.detail?.uid;
-            const residentData = e.detail?.resident;
-
-            if (!uid) return;
-
-            try {
-                if (window.Livewire) {
-                    if (typeof Livewire.dispatch === 'function') {
-                        Livewire.dispatch('nfcUidTapped', { uid: uid, resident: residentData });
-                    } else if (typeof Livewire.emit === 'function') {
-                        Livewire.emit('nfcUidTapped', { uid: uid, resident: residentData });
-                    } else if (typeof Livewire.find === 'function') {
-                        try {
-                            const list = document.querySelectorAll('[wire\\:id]');
-                            if (list && list.length) {
-                                const id = list[0].getAttribute('wire:id');
-                                Livewire.find(id).call('onNfcUid', { uid: uid, resident: residentData });
-                            }
-                        } catch (ie) {
-                            console.debug('Livewire direct call failed', ie);
-                        }
-                    }
-                }
-            } catch (ex) {
-                console.debug('Livewire emit error', ex);
-            }
-        });
-
         window.addEventListener('walkin:success', (e) => {
             alert('Request created: ' + e.detail.transaction_id);
         });
 
         window.addEventListener('walkin:error', (e) => {
             alert('Error: ' + e.detail.message);
-        });
-
-        // Debug: show when Livewire dispatched back to the browser
-        window.addEventListener('nfc:received', (e) => {
-            console.debug('nfc:received event from Livewire', e.detail);
-            let dbg = document.getElementById('nfc-debug');
-            if (!dbg) {
-                dbg = document.createElement('div');
-                dbg.id = 'nfc-debug';
-                dbg.className = 'mt-2 text-xs text-gray-500';
-                document.querySelector('.px-6.py-6')?.appendChild(dbg);
-            }
-            dbg.textContent = 'Livewire received UID: ' + (e.detail?.uid || '<none>');
         });
     </script>
 </div>

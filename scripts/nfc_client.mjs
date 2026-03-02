@@ -66,12 +66,11 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// For testing: listen for commands
+// Simple command loop
 console.log('[INFO] Commands:');
-console.log('  - Type "emit <uuid>" to simulate a card tap');
 console.log('  - Type "exit" to quit\n');
 
-// Simple stdin listener for testing
+// Simple stdin listener
 process.stdin.setRawMode(true);
 process.stdin.on('data', async (chunk) => {
   const input = chunk.toString().trim();
@@ -80,25 +79,6 @@ process.stdin.on('data', async (chunk) => {
     console.log('[...] Exiting...');
     process.exit(0);
   }
-  
-  if (input.toLowerCase().startsWith('emit ')) {
-    const uuid = input.slice(5).trim();
-    if (uuid && isConnected) {
-      console.log(`[TEST] Emitting test UID: ${uuid}`);
-      try {
-        const res = await fetch(`${SOCKET_URL}/emit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: uuid })
-        });
-        if (res.ok) {
-          console.log('[✓] Test UID emitted successfully');
-        }
-      } catch (err) {
-        console.error('[✗] Failed to emit test UID:', err.message);
-      }
-    }
-  }
 });
 
-console.log('[...] Ready. Waiting for NFC cards or test commands...\n');
+console.log('[...] Ready. Waiting for real NFC card events...\n');

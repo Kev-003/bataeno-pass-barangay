@@ -42,6 +42,21 @@ Follow these steps to set up the project on a new device (Windows/Mac/Linux).
 
 ## 5. Troubleshooting (Common Issues)
 
+## 6. NFC Walk-In Hardware Setup (No Mock)
+
+For real card tapping in walk-in flow, run these in separate terminals:
+
+1. `npm run nfc-server`
+2. `python -m venv .venv`
+3. `.\.venv\Scripts\Activate.ps1`
+4. `pip install -r scripts\requirements.txt`
+5. `npm run nfc-bridge`
+6. `npm run dev` and `php artisan serve`
+
+Optional `.env` value:
+
+- `NFC_SOCKET_URL=http://127.0.0.1:8001`
+
 ### Browsershot / PDF Generation Errors
 
 If you see errors related to `Browsershot` or `node` failing:
