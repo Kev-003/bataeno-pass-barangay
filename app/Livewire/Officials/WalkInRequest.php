@@ -8,20 +8,21 @@ use App\Services\DocumentRequestService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
-use Livewire\Attributes\On; // <-- Required for Livewire 3!
+use Livewire\Attributes\On;
+use Filament\Notifications\Notification;
 
 class WalkInRequest extends Component
 {
     public int $step = 1;
 
-    public string  $document_type = '';
-    public string  $purpose       = '';
+    public string $document_type = '';
+    public string $purpose = '';
 
-    public bool    $connected  = false;
-    public ?string $uid        = null;
-    public ?array  $resident   = null;
-    public bool    $loading    = false;
-    public ?string $nfcError   = null;
+    public bool $connected = false;
+    public ?string $uid = null;
+    public ?array $resident = null;
+    public bool $loading = false;
+    public ?string $nfcError = null;
 
     // ── Step 1 actions ────────────────────────────────────────────────────────
 
@@ -29,22 +30,22 @@ class WalkInRequest extends Component
     {
         $this->validate([
             'document_type' => 'required|exists:document_type_properties,id',
-            'purpose'       => 'required|string|min:5',
+            'purpose' => 'required|string|min:5',
         ]);
 
         $this->step = 2;
-        $this->uid      = null;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
     }
 
     public function backToDocumentSelect(): void
     {
-        $this->step     = 1;
-        $this->uid      = null;
+        $this->step = 1;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
-        $this->loading  = false;
+        $this->loading = false;
     }
 
     // ── NFC event handlers (only active on Step 2) ────────────────────────────
@@ -64,9 +65,10 @@ class WalkInRequest extends Component
     #[On('nfc:cardUid')]
     public function onCardUid($uid = null): void
     {
-        if ($this->step !== 2) return;
+        if ($this->step !== 2)
+            return;
 
-        $this->uid      = $uid;
+        $this->uid = $uid;
         $this->resident = null;
         $this->nfcError = null;
     }
@@ -74,10 +76,11 @@ class WalkInRequest extends Component
     #[On('nfc:verifiedUid')]
     public function onVerifiedUid($uid = null): void
     {
-        if ($this->step !== 2) return;
+        if ($this->step !== 2)
+            return;
 
-        $this->uid      = $uid;
-        $this->loading  = true;
+        $this->uid = $uid;
+        $this->loading = true;
         $this->nfcError = null;
         $this->resident = null;
 
@@ -86,7 +89,7 @@ class WalkInRequest extends Component
 
             if ($resident) {
                 $this->resident = $resident;
-                $this->step     = 3; 
+                $this->step = 3;
                 Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
                 $this->nfcError = 'This card is not registered at this barangay. The resident must log in first to register.';
@@ -104,31 +107,32 @@ class WalkInRequest extends Component
     public function onCardRemoved(): void
     {
         if ($this->step === 2) {
-            $this->uid      = null;
+            $this->uid = null;
             $this->resident = null;
             $this->nfcError = null;
-            $this->loading  = false;
+            $this->loading = false;
         }
     }
 
     #[On('nfc:fakeResident')]
     public function onFakeResident($uid = null, $resident = null): void
     {
-        if ($this->step !== 2) return;
+        if ($this->step !== 2)
+            return;
 
-        $this->uid      = $uid;
+        $this->uid = $uid;
         $this->resident = $resident;
         $this->nfcError = null;
-        $this->loading  = false;
-        $this->step     = 3;
+        $this->loading = false;
+        $this->step = 3;
     }
 
     // ── Step 3: go back to re-tap ─────────────────────────────────────────────
 
     public function backToScan(): void
     {
-        $this->step     = 2;
-        $this->uid      = null;
+        $this->step = 2;
+        $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
     }
@@ -139,13 +143,14 @@ class WalkInRequest extends Component
     {
         return strtoupper(
             substr($this->resident['first_name'] ?? '', 0, 1) .
-            substr($this->resident['last_name']  ?? '', 0, 1)
+            substr($this->resident['last_name'] ?? '', 0, 1)
         ) ?: '?';
     }
 
     public function getSelectedDocumentName(): string
     {
-        if (! $this->document_type) return '';
+        if (!$this->document_type)
+            return '';
         return DB::table('document_type_properties')
             ->where('id', $this->document_type)
             ->value('name') ?? '';
@@ -156,15 +161,15 @@ class WalkInRequest extends Component
     public function submit(DocumentRequestService $service): void
     {
         $this->validate([
-            'uid'           => 'required|string',
+            'uid' => 'required|string',
             'document_type' => 'required|exists:document_type_properties,id',
-            'purpose'       => 'required|string|min:5',
+            'purpose' => 'required|string|min:5',
         ]);
 
         $user = User::where('uuid', $this->uid)->first();
 
-        if (! $user) {
-            $this->nfcError = 'Resident not found in the local database.';
+        if (!$user) {
+            Notification::make()->title('Resident Not Found')->danger()->send();
             return;
         }
 
@@ -182,19 +187,21 @@ class WalkInRequest extends Component
             );
 
             if ($transaction) {
-                $this->dispatch('walkin:success', transaction_id: $transaction->id);
+                Notification::make()
+                    ->title('Request Created')
+                    ->body("Transaction ID: {$transaction->id}")
+                    ->success()
+                    ->send();
+
                 $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading']);
                 $this->step = 1;
-            } else {
-                $this->dispatch('walkin:error', message: 'Failed to create request.');
             }
         } catch (\Exception $e) {
-            Log::error('WalkIn submission failed: ' . $e->getMessage());
-            $this->dispatch('walkin:error', message: 'System error: ' . $e->getMessage());
+            Notification::make()->title('System Error')->body($e->getMessage())->danger()->send();
         }
     }
 
-    
+
 
     public function render()
     {

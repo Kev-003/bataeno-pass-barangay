@@ -1,150 +1,145 @@
-<main class="bp-panel p-6 rounded-2xl font-sans bg-sky-50 border border-sky-100">
-    <div class="px-6 py-5 grid grid-cols-2 gap-x-8 gap-y-5">
-        <div>
-            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest">Status</p>
-            <div class="mt-2 flex items-center gap-3">
-                <span class="relative inline-flex h-4 w-4 items-center justify-center flex-shrink-0">
-                    @if($connected)
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-lime-500"></span>
-                    @else
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-gray-300"></span>
-                    @endif
-                </span>
+<section
+    class="fi-section p-6 rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-                <div>
-                    <div class="text-sky-800 font-bold text-lg leading-none">{{ $connected ? 'Connected' : 'Disconnected' }}</div>
-                    <div class="text-sky-400 text-xs mt-0.5">{{ $connected ? 'NFC reader is online' : 'NFC reader is offline' }}</div>
+        {{-- Left Column: Connection & UIDs --}}
+        <div class="space-y-6">
+            <div>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                    System Status
+                </p>
+                <div class="mt-2 flex items-center gap-3">
+                    <span class="relative flex h-3 w-3 items-center justify-center">
+                        @if($connected)
+                            <span
+                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                        @else
+                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                        @endif
+                    </span>
+
+                    <div>
+                        <div @class([
+                            'text-lg font-bold leading-none transition',
+                            'text-emerald-600 dark:text-emerald-400' => $connected,
+                            'text-gray-500 dark:text-gray-400' => !$connected,
+                        ])>
+                            {{ $connected ? 'Reader Online' : 'Reader Offline' }}
+                        </div>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {{ $connected ? 'Ready for resident tap' : 'Check local bridge service' }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Current Card UID</p>
-            <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $cardUid ?? 'None' }}</span></p>
-
-            <p class="text-sky-500 text-[10px] font-bold uppercase tracking-widest mt-4">Current Verified UID</p>
-            <p class="mt-1"><span class="text-xs font-mono px-2 py-1 bg-white border border-sky-200 rounded">{{ $verifiedUid ?? 'None' }}</span></p>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Card UID
+                    </p>
+                    <div class="mt-1">
+                        <code
+                            class="rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-700 dark:bg-white/5 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                            {{ $cardUid ?? 'Waiting...' }}
+                        </code>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Verified
+                        ID</p>
+                    <div class="mt-1">
+                        <code @class([
+                            'rounded px-2 py-1 text-xs font-mono border transition',
+                            'bg-primary-50 text-primary-700 border-primary-200 dark:bg-primary-400/10 dark:text-primary-400 dark:border-primary-400/20' => $verifiedUid,
+                            'bg-gray-50 text-gray-400 border-gray-200 dark:bg-white/5 dark:text-gray-500 dark:border-white/10' => !$verifiedUid,
+                        ])>
+                            {{ $verifiedUid ?? 'None' }}
+                        </code>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div>
-            <h2 class="text-sky-800 font-semibold">Reader Status</h2>
-            @if(empty($readerStatus))
-                <p class="text-sky-500 mt-1">No reader events</p>
-            @else
-                <ul class="list-disc pl-5 mt-1 text-sky-700">
-                    @foreach($readerStatus as $entry)
-                        <li class="py-0.5">{{ $entry }}</li>
-                    @endforeach
-                </ul>
-            @endif
+        {{-- Right Column: Logs & Errors --}}
+        <div
+            class="space-y-6 border-t border-gray-100 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0 dark:border-white/5">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-950 dark:text-white">Live Activity</h3>
+                <div class="mt-2 max-h-24 overflow-y-auto rounded-lg bg-gray-50 p-3 dark:bg-black/20">
+                    @if(empty($readerStatus))
+                        <p class="text-xs italic text-gray-400">Scanning for events...</p>
+                    @else
+                        <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                            @foreach(array_reverse($readerStatus) as $entry)
+                                <li class="flex items-center gap-2">
+                                    <span class="h-1 w-1 rounded-full bg-gray-400"></span>
+                                    {{ $entry }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            </div>
 
-            <h2 class="text-sky-800 font-semibold mt-4">Read Errors</h2>
-            @if(empty($readErrors))
-                <p class="text-sky-500 mt-1">No errors</p>
-            @else
-                <ul class="list-disc pl-5 mt-1 text-red-700">
-                    @foreach($readErrors as $err)
-                        <li class="py-0.5">{{ $err }}</li>
-                    @endforeach
-                </ul>
+            @if(!empty($readErrors))
+                <div>
+                    <h3 class="text-sm font-semibold text-danger-600 dark:text-danger-400">Hardware Warnings</h3>
+                    <ul class="mt-2 space-y-1 text-xs text-danger-500">
+                        @foreach($readErrors as $err)
+                            <li class="flex items-start gap-2">
+                                <x-heroicon-m-exclamation-triangle class="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                {{ $err }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
         </div>
-
     </div>
 
-    {{-- NFC socket bridge --}}
+    {{-- NFC Socket Bridge --}}
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.3/dist/socket.io.min.js"></script>
+    @script
     <script>
         (() => {
             const SOCKET_FALLBACKS = [
                 "{{ env('NFC_SOCKET_URL', 'http://127.0.0.1:3000') }}",
-                'http://localhost:3000',
-                'http://127.0.0.1:8001'
+                'http://localhost:3000'
             ];
 
-            const createDispatcher = () => {
-                return (event, params = {}) => {
-                    try {
-                        if (window.Livewire) {
-                            if (typeof Livewire.dispatch === 'function') return Livewire.dispatch(event, params);
-                            if (typeof Livewire.emit === 'function') return Livewire.emit(event, params);
-                        }
-                        // fallback: dispatch DOM event for any listeners
-                        window.dispatchEvent(new CustomEvent(event, { detail: params }));
-                    } catch (e) {
-                        console.debug('[NFC] dispatch failed', e);
-                    }
-                };
-            };
-
-            const dispatch = createDispatcher();
-
-            // Attempt connections to multiple endpoints sequentially for diagnostics
             async function tryConnect(endpoints) {
                 for (const endpoint of endpoints) {
                     try {
-                        console.debug('[NFC] trying socket endpoint', endpoint);
-                        const socket = io(endpoint, {
-                            transports: ['websocket'],
-                            reconnection: true,
-                            reconnectionAttempts: Infinity,
-                            reconnectionDelay: 1000,
-                            reconnectionDelayMax: 5000,
-                        });
+                        const socket = io(endpoint, { transports: ['websocket'] });
 
-                        socket.on('connect', () => {
-                            console.debug('[NFC] connected to', endpoint, socket.id);
-                            // wire up events
-                            dispatch('nfc:connect');
-                        });
+                        socket.on('connect', () => $wire.dispatch('nfc:connect'));
+                        socket.on('disconnect', () => $wire.dispatch('nfc:disconnect'));
 
-                        socket.on('connect_error', (err) => {
-                            console.debug('[NFC] connect_error', endpoint, err?.message || err);
-                        });
+                        // Normalized event listeners
+                        const handleUid = (uid) => $wire.dispatch('nfc:cardUid', { uid });
+                        socket.on('card-uid', handleUid);
+                        socket.on('card_uid', handleUid);
 
-                        socket.on('disconnect', (reason) => {
-                            console.debug('[NFC] disconnected from', endpoint, reason);
-                            dispatch('nfc:disconnect');
-                        });
+                        const handleVerified = (uid) => $wire.dispatch('nfc:verifiedUid', { uid });
+                        socket.on('verified_uid', handleVerified);
 
-                        socket.on('card-uid',   (uid)   => { console.debug('[NFC] card-uid', uid); dispatch('nfc:cardUid', { uid }); });
-                        socket.on('card_uid',   (uid)   => { console.debug('[NFC] card_uid', uid); dispatch('nfc:cardUid', { uid }); });
+                        socket.on('read-error', (err) => $wire.dispatch('nfc:readError', { err }));
 
-                        socket.on('verified_uid',         (uid) => { console.debug('[NFC] verified_uid', uid); dispatch('nfc:verifiedUid', { uid }); });
-                        socket.on('verified-user-detail', (uid) => { console.debug('[NFC] verified-user-detail', uid); dispatch('nfc:verifiedUid', { uid }); });
-
-                        socket.on('reader-connect',    (name) => { console.debug('[NFC] reader-connect', name); dispatch('nfc:readerConnect', { name }); });
-                        socket.on('reader_connected',  (name) => { console.debug('[NFC] reader_connected', name); dispatch('nfc:readerConnect', { name }); });
-                        socket.on('reader-disconnect', (name) => { console.debug('[NFC] reader-disconnect', name); dispatch('nfc:readerDisconnect', { name }); });
-                        socket.on('reader_removed',    (name) => { console.debug('[NFC] reader_removed', name); dispatch('nfc:readerDisconnect', { name }); });
-
-                        socket.on('read-error', (err)  => { console.debug('[NFC] read-error', err); dispatch('nfc:readError', { err }); });
-                        socket.on('error',      (err)  => { console.debug('[NFC] socket error', err); dispatch('nfc:readError', { err: String(err) }); });
-
-                        // Wait briefly to see if we connected (or error) before trying next endpoint
                         const connected = await new Promise((resolve) => {
                             const t = setTimeout(() => resolve(false), 800);
                             socket.once('connect', () => { clearTimeout(t); resolve(true); });
-                            socket.once('connect_error', () => { clearTimeout(t); resolve(false); });
                         });
 
-                        if (connected) {
-                            // Keep this socket active and stop trying others
-                            window.__BATAENO_NFC_SOCKET = socket;
-                            return socket;
-                        } else {
-                            try { socket.close?.(); socket.disconnect?.(); } catch (e) {}
-                        }
-                    } catch (err) {
-                        console.debug('[NFC] tryConnect error for', endpoint, err?.message || err);
-                    }
+                        if (connected) return socket;
+                        socket.close();
+                    } catch (e) { }
                 }
                 return null;
             }
 
-            // Start connection attempts
-            tryConnect(SOCKET_FALLBACKS).then((sock) => {
-                if (!sock) console.debug('[NFC] no socket endpoints reachable');
-            });
+            tryConnect(SOCKET_FALLBACKS);
         })();
     </script>
-</main>
+    @endscript
+</section>
