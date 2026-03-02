@@ -2,6 +2,8 @@ import http from 'http';
 import { Server } from 'socket.io';
 
 const PORT = Number(process.env.NFC_PORT || 8001);
+let readerOnline = false;
+let readerName = null;
 
 function normalizeUid(rawUid) {
   if (typeof rawUid !== 'string') return null;
@@ -21,6 +23,28 @@ function broadcastUid(io, uid) {
   io.emit('card_uid', uid);
   io.emit('verified_uid', uid);
   io.emit('verified-user-detail', uid);
+}
+
+function broadcastReaderStatus(io, payload = {}) {
+  const online = Boolean(payload.online);
+  const name = typeof payload.name === 'string' && payload.name.trim().length
+    ? payload.name.trim()
+    : null;
+
+  readerOnline = online;
+  readerName = name;
+
+  io.emit('reader_status', {
+    online: readerOnline,
+    name: readerName,
+    updated_at: Date.now(),
+  });
+
+  if (readerOnline) {
+    io.emit('reader-connect', { name: readerName ?? 'Reader' });
+  } else {
+    io.emit('reader-disconnect', { name: readerName ?? 'Reader' });
+  }
 }
 
 const server = http.createServer((req, res) => {
@@ -55,9 +79,39 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/reader-status') {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        broadcastReaderStatus(io, payload);
+
+        console.log(`[NFC] Reader status: ${readerOnline ? 'online' : 'offline'}${readerName ? ` (${readerName})` : ''}`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, reader_online: readerOnline, reader_name: readerName }));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'invalid json payload' }));
+      }
+    });
+
+    return;
+  }
+
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, service: 'nfc-socket-hub', port: PORT }));
+    res.end(JSON.stringify({
+      ok: true,
+      service: 'nfc-socket-hub',
+      port: PORT,
+      reader_online: readerOnline,
+      reader_name: readerName,
+    }));
     return;
   }
 
@@ -71,6 +125,13 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
   console.log(`[NFC] Client connected: ${socket.id}`);
+
+  socket.emit('reader_status', {
+    online: readerOnline,
+    name: readerName,
+    updated_at: Date.now(),
+  });
+
   socket.on('disconnect', (reason) => {
     console.log(`[NFC] Client disconnected: ${socket.id} (${reason})`);
   });

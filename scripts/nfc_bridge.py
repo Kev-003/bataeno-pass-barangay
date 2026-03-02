@@ -8,6 +8,8 @@ import urllib.error
 import urllib.request
 
 from smartcard.CardMonitoring import CardMonitor, CardObserver
+from smartcard.ReaderMonitoring import ReaderMonitor, ReaderObserver
+from smartcard.System import readers as pcsc_readers
 
 
 def format_as_uuid(hex_value: str) -> str:
@@ -105,6 +107,21 @@ def emit_uid(emit_url: str, uid: str, timeout: float) -> bool:
         return False
 
 
+def emit_reader_status(status_url: str, online: bool, timeout: float, reader_name: str | None = None) -> bool:
+    payload = json.dumps({"online": online, "name": reader_name}).encode('utf-8')
+    req = urllib.request.Request(
+        status_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return 200 <= response.status < 300
+    except urllib.error.URLError:
+        return False
+
+
 class UIDObserver(CardObserver):
     def __init__(self, emit_url: str, cooldown_seconds: float, timeout: float, uid_map: dict[str, str]):
         self.emit_url = emit_url
@@ -148,6 +165,33 @@ class UIDObserver(CardObserver):
             print("[NFC] Card removed")
 
 
+class DeviceObserver(ReaderObserver):
+    def __init__(self, status_url: str, timeout: float):
+        self.status_url = status_url
+        self.timeout = timeout
+
+    def update(self, observable, actions):
+        added_readers, removed_readers = actions
+
+        for reader in added_readers:
+            name = str(reader)
+            print(f"[NFC] Reader connected: {name}")
+            emit_reader_status(self.status_url, True, self.timeout, name)
+
+        for reader in removed_readers:
+            name = str(reader)
+            print(f"[NFC] Reader disconnected: {name}")
+
+        try:
+            active_readers = pcsc_readers()
+            if active_readers:
+                emit_reader_status(self.status_url, True, self.timeout, str(active_readers[0]))
+            else:
+                emit_reader_status(self.status_url, False, self.timeout, None)
+        except Exception:
+            emit_reader_status(self.status_url, False, self.timeout, None)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="PC/SC NFC bridge for Bataeno Pass")
     parser.add_argument("--server", default="http://127.0.0.1:8001", help="NFC server base URL")
@@ -157,11 +201,13 @@ def main() -> int:
     args = parser.parse_args()
 
     emit_url = args.server.rstrip('/') + '/emit'
+    status_url = args.server.rstrip('/') + '/reader-status'
     uid_map = load_uid_map(args.uid_map)
 
     print("=" * 70)
     print("NFC Python Bridge")
     print("Emit URL:", emit_url)
+    print("Status URL:", status_url)
     print("UID Map:", args.uid_map, f"({len(uid_map)} entries)")
     print("Press Ctrl+C to stop")
     print("=" * 70)
@@ -170,16 +216,33 @@ def main() -> int:
     observer = UIDObserver(emit_url=emit_url, cooldown_seconds=args.cooldown, timeout=args.timeout, uid_map=uid_map)
     monitor.addObserver(observer)
 
+    reader_monitor = ReaderMonitor()
+    device_observer = DeviceObserver(status_url=status_url, timeout=args.timeout)
+    reader_monitor.addObserver(device_observer)
+
+    try:
+        active_readers = pcsc_readers()
+        if active_readers:
+            emit_reader_status(status_url, True, args.timeout, str(active_readers[0]))
+        else:
+            emit_reader_status(status_url, False, args.timeout, None)
+    except Exception:
+        emit_reader_status(status_url, False, args.timeout, None)
+
     try:
         while True:
             time.sleep(0.2)
     except KeyboardInterrupt:
         print("\n[NFC] Stopping bridge...")
         monitor.deleteObserver(observer)
+        reader_monitor.deleteObserver(device_observer)
+        emit_reader_status(status_url, False, args.timeout, None)
         return 0
     except Exception as err:
         print(f"[NFC] Fatal error: {err}")
         monitor.deleteObserver(observer)
+        reader_monitor.deleteObserver(device_observer)
+        emit_reader_status(status_url, False, args.timeout, None)
         return 1
 
 
