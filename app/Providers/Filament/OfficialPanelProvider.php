@@ -26,6 +26,8 @@ class OfficialPanelProvider extends PanelProvider
         return $panel
             ->id('official')
             ->path('official')
+            ->databaseNotifications()
+            ->databaseNotificationsPolling(null)
             ->brandLogo(
                 fn() =>
                 view(
@@ -54,6 +56,7 @@ class OfficialPanelProvider extends PanelProvider
             ->widgets([
                 \App\Filament\Official\Widgets\WelcomeOfficial::class,
             ])
+            ->discoverLivewireComponents(in: app_path('Livewire'), for: 'App\\Livewire')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

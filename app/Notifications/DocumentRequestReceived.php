@@ -28,8 +28,11 @@ class DocumentRequestReceived extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', 'broadcast'];
     }
+
+
+
 
     /**
      * Get the mail representation of the notification.
@@ -39,8 +42,8 @@ class DocumentRequestReceived extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('Action Required: New Document Request')
             ->greeting('Hello Official,')
-            ->line('A new request for ' . $this->request->documentTypeProperty->name . ' has been received.')
-            ->line('Requester: ' . $this->request->requester->first_name . ' ' . $this->request->requester->last_name)
+            ->line('A new request for ' . $this->request->documentType->name . ' has been received.') // ✅ fixed
+            ->line('Requester: ' . $this->request->requester->name) // use ->name if that's the accessor
             ->action('View in Dashboard', route('official.dashboard', ['barangay_code' => $this->request->barangay->barangay_code]))
             ->line('Please review this at your earliest convenience.');
     }
@@ -55,9 +58,23 @@ class DocumentRequestReceived extends Notification implements ShouldQueue
     {
         return [
             'title' => 'New Document Request',
-            'body' => ($this->request->requester->name ?? 'Resident') . ' requested a ' . ($this->request->documentTypeProperty->name ?? 'Document'),
+            'body' => ($this->request->requester->name ?? 'Resident') . ' requested a ' . ($this->request->documentType->name ?? 'Document'), // ✅ fixed
             'transaction_id' => $this->request->id,
             'type' => 'document_request',
+            'icon' => 'heroicon-o-document-text',   // optional but good for Filament UI
+            'color' => 'warning',                    // optional but good for Filament UI
+        ];
+    }
+
+    public function toBroadcast(object $notifiable): array
+    {
+        return [
+            'title' => 'New Document Request',
+            'body' => ($this->request->requester->name ?? 'Resident') . ' requested a ' . ($this->request->documentType->name ?? 'Document'), // ✅ fixed
+            'transaction_id' => $this->request->id,
+            'type' => 'document_request',
+            'icon' => 'heroicon-o-document-text',   // optional but good for Filament UI
+            'color' => 'warning',                    // optional but good for Filament UI
         ];
     }
 }
