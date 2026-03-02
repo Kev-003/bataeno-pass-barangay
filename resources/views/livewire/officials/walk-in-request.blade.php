@@ -124,6 +124,7 @@
                         </button>
                     </div>
                 </div>
+            </div>
        
 
             {{-- ════════════════════════════════════════════════════════════════
@@ -262,6 +263,66 @@
 
         </div>
     </div>
+
+    @if($showCardConfirmationModal && $step === 2 && $resident)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="confirm-card-modal-title" role="dialog" aria-modal="true">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" wire:click="cancelResidentLookup"></div>
+
+                <div class="relative bg-white rounded-xl shadow-xl w-full max-w-xl border border-gray-200">
+                    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900" id="confirm-card-modal-title">Confirm Bataeno Pass Card</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Please verify the resident details before continuing.</p>
+                        </div>
+                        <button wire:click="cancelResidentLookup" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    </div>
+
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Card UID</p>
+                                <p class="font-medium text-gray-700 mt-0.5 break-all">{{ $uid ?? '—' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Resident UUID</p>
+                                <p class="font-medium text-gray-700 mt-0.5 break-all">{{ $resident['uuid'] ?? '—' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Full Name</p>
+                                <p class="font-medium text-gray-700 mt-0.5">{{ $resident['name'] ?? '—' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Birthdate</p>
+                                <p class="font-medium text-gray-700 mt-0.5">{{ $resident['birthdate_formal'] ?? $resident['birthdate'] ?? '—' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sex</p>
+                                <p class="font-medium text-gray-700 mt-0.5">{{ $resident['sex'] ?? '—' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Address</p>
+                                <p class="font-medium text-gray-700 mt-0.5">{{ $resident['address'] ?? '—' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-4 border-t border-gray-200 flex items-center justify-end gap-2">
+                        <button type="button"
+                                wire:click="cancelResidentLookup"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button"
+                                wire:click="confirmResidentLookup"
+                                class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition">
+                            Confirm Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- NFC socket bridge handled by <livewire:officials.nfc-listener /> --}}
 

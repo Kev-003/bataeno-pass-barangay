@@ -22,6 +22,7 @@ class WalkInRequest extends Component
     public ?array  $resident   = null;
     public bool    $loading    = false;
     public ?string $nfcError   = null;
+    public bool    $showCardConfirmationModal = false;
     
     // Step 4: Editable document fields
     public array   $documentFields = [];
@@ -40,6 +41,7 @@ class WalkInRequest extends Component
         $this->uid      = null;
         $this->resident = null;
         $this->nfcError = null;
+        $this->showCardConfirmationModal = false;
     }
 
     public function backToDocumentSelect(): void
@@ -49,6 +51,7 @@ class WalkInRequest extends Component
         $this->resident = null;
         $this->nfcError = null;
         $this->loading  = false;
+        $this->showCardConfirmationModal = false;
     }
 
     // ── NFC event handlers (only active on Step 2) ────────────────────────────
@@ -73,6 +76,7 @@ class WalkInRequest extends Component
         $this->uid      = $uid;
         $this->resident = null;
         $this->nfcError = null;
+        $this->showCardConfirmationModal = false;
     }
 
     #[On('nfc:verifiedUid')]
@@ -84,6 +88,7 @@ class WalkInRequest extends Component
         $this->loading  = true;
         $this->nfcError = null;
         $this->resident = null;
+        $this->showCardConfirmationModal = false;
 
         try {
             $resident = app(BataenoService::class)->findByCardUid($uid);
@@ -92,7 +97,7 @@ class WalkInRequest extends Component
                 $this->resident = $resident;
                 // Auto-fill document fields from resident data
                 $this->populateDocumentFields($resident);
-                $this->step     = 3; 
+                $this->showCardConfirmationModal = true;
                 Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
                 $this->nfcError = 'This card is not registered at this barangay. The resident must log in first to register.';
@@ -114,6 +119,7 @@ class WalkInRequest extends Component
             $this->resident = null;
             $this->nfcError = null;
             $this->loading  = false;
+            $this->showCardConfirmationModal = false;
         }
     }
 
@@ -125,6 +131,27 @@ class WalkInRequest extends Component
         $this->uid      = null;
         $this->resident = null;
         $this->nfcError = null;
+        $this->showCardConfirmationModal = false;
+    }
+
+    public function confirmResidentLookup(): void
+    {
+        if (! $this->resident) {
+            $this->nfcError = 'No verified resident details found.';
+            $this->showCardConfirmationModal = false;
+            return;
+        }
+
+        $this->showCardConfirmationModal = false;
+        $this->step = 3;
+    }
+
+    public function cancelResidentLookup(): void
+    {
+        $this->showCardConfirmationModal = false;
+        $this->resident = null;
+        $this->uid = null;
+        $this->documentFields = [];
     }
 
     // ── Step 3/4: Document field management ────────────────────────────────
@@ -209,7 +236,7 @@ class WalkInRequest extends Component
 
             if ($transaction) {
                 $this->dispatch('walkin:success', transaction_id: $transaction->id);
-                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading', 'documentFields', 'isEditingFields']);
+                $this->reset(['uid', 'resident', 'document_type', 'purpose', 'nfcError', 'loading', 'documentFields', 'isEditingFields', 'showCardConfirmationModal']);
                 $this->step = 1;
             } else {
                 $this->dispatch('walkin:error', message: 'Failed to create request.');
