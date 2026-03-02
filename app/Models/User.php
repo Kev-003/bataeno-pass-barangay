@@ -291,6 +291,19 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
         return Barangay::where('id', $id)->value('barangay_code');
     }
 
+    /**
+     * Returns all active Barangay Codes the user has access to.
+     */
+    public function getActiveBarangayCodes(): array
+    {
+        $ids = $this->getActiveBarangayIds();
+        if (empty($ids)) {
+            return [];
+        }
+
+        return Barangay::whereIn('id', $ids)->pluck('barangay_code')->toArray();
+    }
+
     public function hasAnyValidID(): bool
     {
         if (!$this->egov_data || !is_array($this->egov_data)) {

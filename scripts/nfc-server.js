@@ -1,91 +1,145 @@
 import http from 'http';
 import { Server } from 'socket.io';
 
-const PORT = process.env.NFC_PORT || 8001;
+const PORT = Number(process.env.NFC_PORT || 8001);
+let readerOnline = false;
+let readerName = null;
 
-const server = http.createServer(async (req, res) => {
-  // Minimal POST /emit support for testing when running in mock mode
+function normalizeUid(rawUid) {
+  if (typeof rawUid !== 'string') return null;
+  const value = rawUid.trim().replace(/^{|}$/g, '').toLowerCase();
+  if (!value.length) return null;
+
+  const compact = value.replace(/-/g, '');
+  if (/^[0-9a-f]{32}$/.test(compact)) {
+    return `${compact.slice(0, 8)}-${compact.slice(8, 12)}-${compact.slice(12, 16)}-${compact.slice(16, 20)}-${compact.slice(20)}`;
+  }
+
+  return value;
+}
+
+function broadcastUid(io, uid) {
+  io.emit('card-uid', uid);
+  io.emit('card_uid', uid);
+  io.emit('verified_uid', uid);
+  io.emit('verified-user-detail', uid);
+}
+
+function broadcastReaderStatus(io, payload = {}) {
+  const online = Boolean(payload.online);
+  const name = typeof payload.name === 'string' && payload.name.trim().length
+    ? payload.name.trim()
+    : null;
+
+  readerOnline = online;
+  readerName = name;
+
+  io.emit('reader_status', {
+    online: readerOnline,
+    name: readerName,
+    updated_at: Date.now(),
+  });
+
+  if (readerOnline) {
+    io.emit('reader-connect', { name: readerName ?? 'Reader' });
+  } else {
+    io.emit('reader-disconnect', { name: readerName ?? 'Reader' });
+  }
+}
+
+const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/emit') {
     let body = '';
-    req.on('data', (chunk) => (body += chunk));
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+
     req.on('end', () => {
       try {
-        const json = JSON.parse(body);
-        const uid = json.uid || json.data?.uid;
-        if (uid) {
-          io.emit('verified_uid', uid);
-          io.emit('verified-user-detail', uid);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, uid }));
+        const payload = JSON.parse(body || '{}');
+        const uid = normalizeUid(payload.uid || payload.data?.uid);
+
+        if (!uid) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'uid is required' }));
           return;
         }
-      } catch (e) {}
-      res.writeHead(400);
-      res.end(JSON.stringify({ ok: false }));
+
+        broadcastUid(io, uid);
+        console.log(`[NFC] UID received and broadcast: ${uid}`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, uid }));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'invalid json payload' }));
+      }
     });
+
     return;
   }
-  // simple status
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ ok: true, now: Date.now() }));
+
+  if (req.method === 'POST' && req.url === '/reader-status') {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        broadcastReaderStatus(io, payload);
+
+        console.log(`[NFC] Reader status: ${readerOnline ? 'online' : 'offline'}${readerName ? ` (${readerName})` : ''}`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, reader_online: readerOnline, reader_name: readerName }));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'invalid json payload' }));
+      }
+    });
+
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      ok: true,
+      service: 'nfc-socket-hub',
+      port: PORT,
+      reader_online: readerOnline,
+      reader_name: readerName,
+    }));
+    return;
+  }
+
+  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ ok: false, error: 'not found' }));
 });
 
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*' },
+});
 
 io.on('connection', (socket) => {
-  console.log('Client connected', socket.id);
+  console.log(`[NFC] Client connected: ${socket.id}`);
+
+  socket.emit('reader_status', {
+    online: readerOnline,
+    name: readerName,
+    updated_at: Date.now(),
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[NFC] Client disconnected: ${socket.id} (${reason})`);
+  });
 });
-
-let usedNative = false;
-try {
-  // Try dynamic import of native dependency. If not present, run mock mode.
-  const mod = await import('nfc-pcsc');
-  const { NFC } = mod;
-  if (typeof NFC === 'function') {
-    usedNative = true;
-    const nfc = new NFC();
-
-    nfc.on('reader', (reader) => {
-      console.log(`${reader.reader.name} device attached`);
-
-      reader.on('card', (card) => {
-  const uid = card.uid || (card.atr && card.atr.toString('hex')) || null;
-  if (uid) {
-    io.emit('card-uid', uid);
-    io.emit('verified_uid', uid);        // ← add this
-    io.emit('verified-user-detail', uid); // ← and this (blade listens to both)
-  }
-});
-
-      reader.on('card.off', (card) => {
-        console.log('Card removed', card);
-        io.emit('card-removed');
-      });
-
-      reader.on('error', (err) => {
-        console.error('Reader error', err);
-      });
-
-      reader.on('end', () => {
-        console.log(`${reader.reader.name} device removed`);
-      });
-    });
-
-    nfc.on('error', (err) => {
-      console.error('NFC error', err);
-    });
-  }
-} catch (err) {
-  console.warn('nfc-pcsc not available; running in mock mode. Install nfc-pcsc for real readers.');
-}
-
-// If native wasn't used, emit a sample UID periodically to help testing clients.
-if (!usedNative) {
-  // Only emit sample UID when explicitly requested via POST /emit, not on interval
-  // Remove interval-based emission to avoid repeated UID events
-}
 
 server.listen(PORT, () => {
-  console.log(`NFC socket server listening on http://127.0.0.1:${PORT}`);
-  if (!usedNative) console.log('Mock mode: emitting sample UID every 20s.');
+  console.log('='.repeat(70));
+  console.log(`NFC Socket Hub listening on http://127.0.0.1:${PORT}`);
+  console.log('Waiting for real hardware bridge events at POST /emit');
+  console.log('='.repeat(70));
 });

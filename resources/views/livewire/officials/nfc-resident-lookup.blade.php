@@ -143,21 +143,4 @@
         </div>
     @endif
 
-    {{-- ═══════════════════════════════════════════════════════════════════
-    NFC SOCKET BRIDGE (Optimized for Filament/Livewire 3)
-    ═══════════════════════════════════════════════════════════════════ --}}
-    @script
-    <script>
-        const SOCKET_URL = "{{ env('NFC_SOCKET_URL', 'http://127.0.0.1:3000') }}";
-
-        // Use standard io if available via the listener component
-        if (typeof io !== 'undefined') {
-            const socket = io(SOCKET_URL, { transports: ['websocket'] });
-
-            socket.on('card-uid', (uid) => $wire.dispatch('nfc:cardUid', { uid }));
-            socket.on('verified_uid', (uid) => $wire.dispatch('nfc:verifiedUid', { uid }));
-            socket.on('card-removed', () => $wire.dispatch('nfc:cardRemoved'));
-        }
-    </script>
-    @endscript
 </div>

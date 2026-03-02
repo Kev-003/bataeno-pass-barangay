@@ -5,7 +5,8 @@
         "dev": "vite",
         "build": "vite build",
         "nfc-server": "node scripts/nfc-server.js",
-        "nfc-mock": "node scripts/mock-nfc-server.js"
+        "nfc-client": "node scripts/nfc_client.mjs",
+        "nfc-bridge": "python scripts/nfc_bridge.py --server http://127.0.0.1:8001"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -22,6 +23,7 @@
         "@brynrgnzls/nfc-listener": "^1.0.2",
         "d3": "^7.9.0",
         "gsap": "^3.14.2",
+        "nfc-pcsc": "^0.8.1",
         "ogl": "^1.0.11",
         "puppeteer": "^24.37.3",
         "socket.io": "^4.8.3"
