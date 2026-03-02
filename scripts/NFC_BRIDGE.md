@@ -39,3 +39,7 @@ php artisan serve
 - No mock flow is required.
 - Ensure NFC reader drivers are installed and PC/SC service is running.
 - Default socket URL is `http://127.0.0.1:8001`; set `NFC_SOCKET_URL` in `.env` if needed.
+- The Python bridge normalizes 16-byte card IDs into canonical UUID text. If a card emits GUID little-endian bytes, they are converted to standard UUID order before emit.
+- Short hardware UIDs (for example 4/7-byte tags) are emitted as lowercase hex and are not padded into fake UUID strings.
+- For hardware IDs that should resolve to a known resident UUID, configure `scripts/nfc_uid_map.json`.
+- The bridge auto-loads this file via `--uid-map scripts/nfc_uid_map.json`.

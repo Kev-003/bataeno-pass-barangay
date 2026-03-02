@@ -5,8 +5,15 @@ const PORT = Number(process.env.NFC_PORT || 8001);
 
 function normalizeUid(rawUid) {
   if (typeof rawUid !== 'string') return null;
-  const value = rawUid.trim();
-  return value.length ? value : null;
+  const value = rawUid.trim().replace(/^{|}$/g, '').toLowerCase();
+  if (!value.length) return null;
+
+  const compact = value.replace(/-/g, '');
+  if (/^[0-9a-f]{32}$/.test(compact)) {
+    return `${compact.slice(0, 8)}-${compact.slice(8, 12)}-${compact.slice(12, 16)}-${compact.slice(16, 20)}-${compact.slice(20)}`;
+  }
+
+  return value;
 }
 
 function broadcastUid(io, uid) {
