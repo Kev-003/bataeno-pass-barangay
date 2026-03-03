@@ -80,6 +80,8 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'date_of_birth' => 'date',
+        'registered_at' => 'date',
     ];
 
     public function family()
@@ -112,6 +114,11 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     public function barangay()
     {
         return $this->belongsTo(Barangay::class, 'barangay_id');
+    }
+
+    public function municity()
+    {
+        return $this->belongsTo(Municipality::class, 'municity_id');
     }
 
     public function transactions()
@@ -227,6 +234,63 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
         return trim("{$this->first_name} {$this->last_name}") ?: $this->email;
     }
 
+    /**
+     * Get the user's formatted location.
+     */
+    public function getLocationAttribute(): string
+    {
+        // Use active barangay IDs to determine primary location
+        // getActiveBarangayIds() already prioritizes: term > residence > household > delegation
+        $activeIds = $this->getActiveBarangayIds();
+
+        if (!empty($activeIds)) {
+            $barangay = Barangay::with('municipality')->find($activeIds[0]);
+
+            if ($barangay) {
+                $municityName = $barangay->municipality?->name;
+                return $municityName
+                    ? "{$barangay->name}, {$municityName}"
+                    : $barangay->name;
+            }
+        }
+
+        return 'Outsider / Non-Bataan Resident';
+    }
+
+    public function syncEgovLocation(array $egovData): void
+    {
+        $barangayName = $egovData['barangay'] ?? null;
+        $municityName = $egovData['municity'] ?? null;
+
+        // Try to find a matching barangay within Bataan
+        $barangay = $barangayName
+            ? Barangay::whereRaw('LOWER(name) = ?', [strtolower($barangayName)])
+                ->first()
+            : null;
+
+        if ($barangay) {
+            // Found in Bataan — link normally
+            $this->update(['barangay_id' => $barangay->id]);
+            return;
+        }
+
+        // Not in Bataan — create an outsider household member profile
+        // Only create if one doesn't already exist for this user
+        $alreadyOutsider = \App\Models\HouseholdMemberProfile::where('user_id', $this->id)
+            ->where('membership_type', 'Outsider')
+            ->exists();
+
+        if (!$alreadyOutsider) {
+            \App\Models\HouseholdMemberProfile::create([
+                'user_id' => $this->id,
+                'household_id' => null,  // no local household
+                'role' => 'Member',
+                'membership_type' => 'Outsider',
+                'presence_status' => 'Present',
+                'ownership' => 'N/A',
+            ]);
+        }
+    }
     public function getActiveBarangayIds(): array
     {
         // 1. Get IDs from Household memberships
@@ -328,5 +392,21 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
 
         return false;
     }
+
+    /**
+     * Get the URL for the user's profile photo.
+     */
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        if ($this->profile_photos) {
+            return \Illuminate\Support\Facades\Storage::url($this->profile_photos);
+        }
+
+        // Return a default initials SVG or placeholder if no photo
+        $name = urlencode($this->name);
+        return "https://ui-avatars.com/api/?name={$name}&color=7F9CF5&background=EBF4FF";
+    }
+
+
 
 }

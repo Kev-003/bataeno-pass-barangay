@@ -41,4 +41,12 @@ class Family extends Model
     {
         return $this->belongsTo(Barangay::class, 'barangay_id');
     }
+
+    /**
+     * Accessor for 'name' to satisfy views expecting 'name' instead of 'family_name'.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->family_name;
+    }
 }
