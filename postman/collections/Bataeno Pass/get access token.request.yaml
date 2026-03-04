@@ -1,0 +1,53 @@
+$kind: http-request
+name: 'Get access token (client_credentials)'
+method: POST
+url: '{{token_url}}'
+order: 900
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/x-www-form-urlencoded
+body:
+  type: urlencoded
+  content:
+    - key: grant_type
+      value: client_credentials
+    - key: client_id
+      value: '{{client_id}}'
+    - key: client_secret
+      value: '{{client_secret}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status code is 200', function () {
+        pm.response.to.have.status(200);
+      });
+
+      let json;
+      pm.test('Response is JSON', function () {
+        json = pm.response.json();
+      });
+
+      pm.test('Has access_token', function () {
+        json = json || pm.response.json();
+        pm.expect(json).to.have.property('access_token');
+        pm.expect(json.access_token).to.be.a('string').and.to.have.length.greaterThan(10);
+      });
+
+      // Store access token in active environment
+      try {
+        json = json || pm.response.json();
+        if (json && json.access_token) {
+          pm.environment.set('access_token', json.access_token);
+        }
+        if (json && json.expires_in) {
+          pm.environment.set('access_token_expires_in', String(json.expires_in));
+        }
+        if (json && json.token_type) {
+          pm.environment.set('access_token_type', String(json.token_type));
+        }
+      } catch (e) {
+        // ignore
+      }

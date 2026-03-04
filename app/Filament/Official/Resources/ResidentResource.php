@@ -25,53 +25,63 @@ class ResidentResource extends Resource
 
     protected static ?string $label = 'Residents';
 
+    public static function getFormSchema(): array
+    {
+        return [
+            Forms\Components\Section::make('Basic Information')
+                ->schema([
+                    Forms\Components\TextInput::make('first_name')->required(),
+                    Forms\Components\TextInput::make('middle_name'),
+                    Forms\Components\TextInput::make('last_name')->required(),
+                    Forms\Components\TextInput::make('email')->email()->unique(ignoreRecord: true),
+                    Forms\Components\DatePicker::make('date_of_birth'),
+                    Forms\Components\Select::make('gender')
+                        ->options([
+                            'Male' => 'Male',
+                            'Female' => 'Female',
+                        ]),
+                    Forms\Components\Select::make('civil_status')
+                        ->options([
+                            'Single' => 'Single',
+                            'Married' => 'Married',
+                            'Widowed' => 'Widowed',
+                            'Separated' => 'Separated',
+                        ])
+                        ->required(),
+                    Forms\Components\TextInput::make('occupation'),
+                    Forms\Components\TextInput::make('contact_number'),
+                    Forms\Components\Hidden::make('uuid'),
+                    Forms\Components\Hidden::make('egov_data'),
+                ])->columns(2),
+
+            Forms\Components\Section::make('Lineage & Family')
+                ->description('Managing these fields will automatically update and clean up family records.')
+                ->schema([
+                    Forms\Components\Select::make('father_id')
+                        ->label('Father')
+                        ->relationship('father', 'first_name', fn(Builder $query) => $query->withTrashed()->where('gender', 'Male'))
+                        ->getOptionLabelFromRecordUsing(fn($record) => $record->name)
+                        ->searchable(['first_name', 'last_name'])
+                        ->preload(),
+                    Forms\Components\Select::make('mother_id')
+                        ->label('Mother')
+                        ->relationship('mother', 'first_name', fn(Builder $query) => $query->withTrashed()->where('gender', 'Female'))
+                        ->getOptionLabelFromRecordUsing(fn($record) => $record->name)
+                        ->searchable(['first_name', 'last_name'])
+                        ->preload(),
+                    Forms\Components\Select::make('family_id')
+                        ->label('Current Family Unit')
+                        ->relationship('family', 'family_name')
+                        ->searchable()
+                        ->preload()
+                        ->helperText('Assigning a lone parent to their child\'s family ID here will dissolve their old empty family.'),
+                ])->columns(2),
+        ];
+    }
+
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Basic Information')
-                    ->schema([
-                        Forms\Components\TextInput::make('first_name')->required(),
-                        Forms\Components\TextInput::make('middle_name'),
-                        Forms\Components\TextInput::make('last_name')->required(),
-                        Forms\Components\TextInput::make('email')->email()->unique(ignoreRecord: true),
-                        Forms\Components\DatePicker::make('date_of_birth'),
-                        Forms\Components\Select::make('gender')
-                            ->options([
-                                'Male' => 'Male',
-                                'Female' => 'Female',
-                            ]),
-                        Forms\Components\Select::make('civil_status')
-                            ->options([
-                                'Single' => 'Single',
-                                'Married' => 'Married',
-                                'Widowed' => 'Widowed',
-                                'Separated' => 'Separated',
-                            ])
-                            ->required(),
-                    ])->columns(2),
-
-                Forms\Components\Section::make('Lineage & Family')
-                    ->description('Managing these fields will automatically update and clean up family records.')
-                    ->schema([
-                        Forms\Components\Select::make('father_id')
-                            ->label('Father')
-                            ->relationship('father', 'name', fn(Builder $query) => $query->withTrashed()->where('gender', 'Male'))
-                            ->searchable()
-                            ->preload(),
-                        Forms\Components\Select::make('mother_id')
-                            ->label('Mother')
-                            ->relationship('mother', 'name', fn(Builder $query) => $query->withTrashed()->where('gender', 'Female'))
-                            ->searchable()
-                            ->preload(),
-                        Forms\Components\Select::make('family_id')
-                            ->label('Current Family Unit')
-                            ->relationship('family', 'family_name')
-                            ->searchable()
-                            ->preload()
-                            ->helperText('Assigning a lone parent to their child\'s family ID here will dissolve their old empty family.'),
-                    ])->columns(2),
-            ]);
+        return $form->schema(self::getFormSchema());
     }
 
     public static function table(Table $table): Table
@@ -171,7 +181,7 @@ class ResidentResource extends Resource
     {
         return [
             'index' => Pages\ListResidents::route('/'),
-            'create' => Pages\EmptyResidentPage::route('/create'),
+            'create' => Pages\CreateResident::route('/create'),
             'edit' => Pages\EditResident::route('/{record}/edit'),
         ];
     }

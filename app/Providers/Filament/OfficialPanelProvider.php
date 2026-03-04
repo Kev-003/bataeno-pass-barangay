@@ -74,6 +74,11 @@ class OfficialPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::head.end',
                 fn(): string => view('filament.official.hooks.vite')->render(),
+            )
+            ->renderHook(
+                'panels::scripts.after',
+                fn(): string => '<script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>' .
+                '<script>QrScanner.WORKER_PATH = "https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner-worker.min.js";</script>',
             );
     }
 }

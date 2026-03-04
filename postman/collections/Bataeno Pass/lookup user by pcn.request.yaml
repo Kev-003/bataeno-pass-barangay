@@ -1,0 +1,46 @@
+$kind: http-request
+name: 'Lookup user by PCN (QR scan)'
+method: POST
+url: '{{baseUrl}}/api/users'
+order: 1000
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{access_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "pcn": "{{pcn}}",
+      "qr_payload": "{{qr_payload}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // Basic sanity tests. Adjust field names once API response shape is confirmed.
+      pm.test('Status code is 200', function () {
+        pm.response.to.have.status(200);
+      });
+
+      let json;
+      pm.test('Response is JSON', function () {
+        json = pm.response.json();
+      });
+
+      pm.test('Response contains user fields (best-effort)', function () {
+        json = json || pm.response.json();
+
+        // API might return { user: {...} } or the user object directly.
+        const user = (json && json.user) ? json.user : json;
+
+        pm.expect(user, 'user object').to.be.an('object');
+
+        // Check for common fields, without requiring exact schema.
+        const candidateKeys = ['pcn', 'id', 'name', 'first_name', 'last_name', 'email', 'mobile', 'created_at'];
+        const presentKeys = candidateKeys.filter(k => Object.prototype.hasOwnProperty.call(user, k));
+        pm.expect(presentKeys.length, 'at least one expected user field present').to.be.greaterThan(0);
+      });

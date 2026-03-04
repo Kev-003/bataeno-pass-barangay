@@ -1,0 +1,39 @@
+$kind: http-request
+name: Test
+url: "{{baseUrl}}/api/user"
+method: POST
+headers:
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: text
+      key: first_name
+      value: Kevern Joebert
+      description: ""
+      disabled: false
+    - type: text
+      key: middle_name
+      value: Calimbas
+      description: ""
+      disabled: false
+    - type: text
+      key: last_name
+      value: Angeles
+      description: ""
+      disabled: false
+    - type: text
+      key: ext_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: birthday
+      value: 2003-09-20
+      description: ""
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: "{{vault:token}}"
+order: 4263393424644600

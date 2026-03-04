@@ -1,0 +1,12 @@
+$kind: collection
+name: Bataeno Pass
+description: |-
+  Collection for interacting with the Bataeno Pass API.
+
+  ## Setup
+  - Select the environment: **Bataeno Pass - Dev**
+  - Set `pcn` to the PCN value obtained from a QR scan.
+variables:
+  - key: baseUrl
+    value: 'https://bataeno-pass.bataan.gov.ph'
+    description: Base URL for Bataeno Pass API

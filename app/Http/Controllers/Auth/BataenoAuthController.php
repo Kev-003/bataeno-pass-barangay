@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barangay;
+use App\Models\Municipality;
 use App\Models\User;
 use App\Services\BataenoService;
 use Illuminate\Http\Request;
@@ -22,11 +23,11 @@ class BataenoAuthController extends Controller
         $registered_uri = config('services.bataeno.redirect');
 
         $params = [
-            'client_id'     => config('services.bataeno.client_id'),
-            'redirect_uri'  => config('services.bataeno.redirect'),
+            'client_id' => config('services.bataeno.client_id'),
+            'redirect_uri' => config('services.bataeno.redirect'),
             'response_type' => 'code',
-            'scope'         => 'view-user',
-            'state'         => $state,
+            'scope' => 'view-user',
+            'state' => $state,
         ];
 
         return redirect(
@@ -46,11 +47,11 @@ class BataenoAuthController extends Controller
         $tokenResponse = Http::asForm()->post(
             config('services.bataeno.base_url') . '/oauth/token',
             [
-                'grant_type'    => 'authorization_code',
-                'client_id'     => config('services.bataeno.client_id'),
+                'grant_type' => 'authorization_code',
+                'client_id' => config('services.bataeno.client_id'),
                 'client_secret' => config('services.bataeno.client_secret'),
-                'redirect_uri'  => config('services.bataeno.redirect'),
-                'code'          => $request->query('code'),
+                'redirect_uri' => config('services.bataeno.redirect'),
+                'code' => $request->query('code'),
             ]
         );
 
@@ -58,45 +59,43 @@ class BataenoAuthController extends Controller
             return redirect('/login')->withErrors(['bataeno' => 'Token exchange failed. Please try again.']);
         }
 
-        $tokens      = $tokenResponse->json();
+        $tokens = $tokenResponse->json();
         $accessToken = $tokens['access_token'] ?? null;
-        $expiresIn   = (int) ($tokens['expires_in'] ?? 3600);
-
-        if (! $accessToken) {
+        //dd($accessToken);
+        if (!$accessToken) {
             return redirect('/login')->withErrors(['bataeno' => 'No access token returned.']);
         }
 
         // ✅ Cache the token — no DB column needed
         $bataeno->storeOfficialToken($accessToken);
 
-            // Fetch the user's profile from Bataeno
-            $govData = $bataeno->fetchAuthenticatedProfile($accessToken);
-            $govUserData = $govData['data'] ?? $govData;
+        // Fetch the user's profile from Bataeno
+        $govData = $bataeno->fetchAuthenticatedProfile($accessToken);
+        $govUserData = $govData['data'] ?? $govData['raw'] ?? $govData;
 
-            if (! $govUserData) {
-                return redirect('/login')->withErrors(['bataeno' => 'Could not fetch user profile.']);
-            }
+        if (!$govUserData) {
+            return redirect('/login')->withErrors(['bataeno' => 'Could not fetch user profile.']);
+        }
 
         $user = User::firstOrNew(['email' => $govUserData['email'] ?? null]);
 
         $egovMunicityCode = $govUserData['municity_code'] ?? null;
         $egovBarangayCode = $govUserData['barangay_code'] ?? null;
-        $dateOfBirth = $govUserData['birthdate'] ?? $govUserData['dob'] ?? null;
-        $municityId = $egovMunicityCode ? (\App\Models\Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
-        $barangayId = $egovBarangayCode ? (\App\Models\Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
+        $municityId = $egovMunicityCode ? (Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
+        $barangayId = $egovBarangayCode ? (Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
 
         $user->fill([
             'uuid' => $govUserData['uuid'] ?? null,
             // Identity
-            'first_name' => $govUserData['first_name'] ?? null,
-            'middle_name' => $govUserData['middle_name'] ?? null,
-            'last_name' => $govUserData['last_name'] ?? null,
+            'first_name' => $govUserData['first_name'] ?? $govUserData['fName'] ?? null,
+            'middle_name' => $govUserData['middle_name'] ?? $govUserData['mName'] ?? null,
+            'last_name' => $govUserData['last_name'] ?? $govUserData['lName'] ?? null,
             'suffix' => $govUserData['ext_name'] ?? null,
 
             // Profile Details
             'date_of_birth' => $govUserData['birthday'] ?? $govUserData['birthdate'] ?? $govUserData['dob'] ?? null,
             'place_of_birth' => $govUserData['birth_place'] ?? null,
-            'gender' => $govUserData['sex'] ?? null,
+            'gender' => $govUserData['sex'] ?? $govUserData['gender'] ?? null,
             'civil_status' => $govUserData['civil_status'] ?? null,
 
             // Location IDs Lookups
@@ -106,8 +105,8 @@ class BataenoAuthController extends Controller
             'egov_data' => $govUserData['identities'] ?? $govUserData ?? null,
         ]);
 
-        if (! $user->exists) {
-            $user->password      = bcrypt(Str::random(16));
+        if (!$user->exists) {
+            $user->password = bcrypt(Str::random(16));
             $user->registered_at = now();
         }
 
@@ -123,5 +122,12 @@ class BataenoAuthController extends Controller
         }
 
         return redirect('/dashboard');
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        session()->forget(BataenoService::SESSION_KEY);
+        return redirect('/');
     }
 }

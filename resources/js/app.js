@@ -1,10 +1,12 @@
 import "./bootstrap";
 import initDotGrid from "./animations/DotGrid";
 import Grainient from "./animations/Grainient";
-import './bootstrap';
+import "./bootstrap";
 import { NfcHandler } from "@brynrgnzls/nfc-listener";
+import QrScanner from "qr-scanner";
 
 // Expose it globally for Blade scripts
+window.QrScanner = QrScanner;
 window.NfcHandler = NfcHandler;
 
 import lineageD3 from "./components/LineageD3";

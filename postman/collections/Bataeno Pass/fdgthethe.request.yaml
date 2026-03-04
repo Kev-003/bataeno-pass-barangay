@@ -1,0 +1,14 @@
+$kind: http-request
+name: fdgthethe
+url: https://bataeno-pass-test.bataan.gov.ph/api/user
+method: POST
+headers:
+  Accept: application\json
+body:
+  type: json
+  content: ""
+auth:
+  type: bearer
+  credentials:
+    token: "{{vault:token}}"
+order: 3707809809468816

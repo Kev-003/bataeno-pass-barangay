@@ -1,0 +1,39 @@
+$kind: http-request
+name: dfsbgnhgmfbgdb
+url: https://bataeno-pass-test.bataan.gov.ph/api/user
+method: POST
+headers:
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: text
+      key: first_name
+      value: Kevern Joebert
+      description: ""
+      disabled: false
+    - type: text
+      key: middle_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: last_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: ext_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: date_of_birth
+      value: ""
+      description: ""
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: "{{vault:token}}"
+order: 4099213666902270

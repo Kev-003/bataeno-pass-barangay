@@ -5,7 +5,7 @@
             <nav class="flex items-center gap-2 sm:gap-4">
                 @foreach([[1, 'Select Details'], [2, 'Scan Resident'], [3, 'Confirm Request']] as [$num, $label])
                     <div class="flex items-center gap-2 sm:gap-4">
-                        
+
                         {{-- Step Indicator Pill --}}
                         <div @class([
                             'flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-200',
@@ -26,7 +26,7 @@
                                     {{ $num }}
                                 @endif
                             </div>
-                            
+
                             {{-- Step Label --}}
                             <span>{{ $label }}</span>
                         </div>
@@ -44,8 +44,9 @@
         </div>
 
         {{-- Main Card --}}
-        <div class="fi-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
-            
+        <div
+            class="fi-card bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+
             {{-- STEP 1: Document Details --}}
             @if($step === 1)
                 <div>
@@ -57,7 +58,8 @@
                             {{-- Document Type Field --}}
                             <div>
                                 <div class="mb-1 flex items-center justify-between">
-                                    <label class="text-sm font-medium leading-6 text-gray-950 dark:text-white" for="document_type">
+                                    <label class="text-sm font-medium leading-6 text-gray-950 dark:text-white"
+                                        for="document_type">
                                         Document Type <sup class="text-danger-600 dark:text-danger-400 font-medium">*</sup>
                                     </label>
                                 </div>
@@ -77,12 +79,14 @@
                             {{-- Purpose Field --}}
                             <div>
                                 <div class="mb-1 flex items-center justify-between">
-                                    <label class="text-sm font-medium leading-6 text-gray-950 dark:text-white" for="purpose">
+                                    <label class="text-sm font-medium leading-6 text-gray-950 dark:text-white"
+                                        for="purpose">
                                         Purpose <sup class="text-danger-600 dark:text-danger-400 font-medium">*</sup>
                                     </label>
                                 </div>
                                 <x-filament::input.wrapper :valid="!$errors->has('purpose')">
-                                    <x-filament::input type="text" wire:model="purpose" id="purpose" placeholder="Enter reason..." />
+                                    <x-filament::input type="text" wire:model="purpose" id="purpose"
+                                        placeholder="Enter reason..." />
                                 </x-filament::input.wrapper>
                                 @error('purpose')
                                     <p class="text-sm text-danger-600 dark:text-danger-400 mt-1">{{ $message }}</p>
@@ -93,7 +97,8 @@
                         {{-- Filament Native Footer Action --}}
                         <x-slot name="footerActions">
                             <div class="flex justify-end w-full">
-                                <x-filament::button wire:click="proceedToScan" color="primary" icon="heroicon-m-arrow-right" icon-position="after">
+                                <x-filament::button wire:click="proceedToScan" color="primary" icon="heroicon-m-arrow-right"
+                                    icon-position="after">
                                     Next: Scan Resident Card
                                 </x-filament::button>
                             </div>
@@ -102,29 +107,59 @@
                 </div>
             @endif
 
-            {{-- STEP 2: Scan NFC --}}
             <div>
-                <x-filament::section class="{{ $step === 2 ? : 'hidden' }}">
+                <x-filament::section class="{{ $step === 2 ?: 'hidden' }}">
                     <x-slot name="heading">Scan Resident ID</x-slot>
-                    <x-slot name="description">Tap the resident's NFC card to the reader to verify their identity.</x-slot>
-                    
+                    <x-slot name="description">Tap the resident's NFC card to the reader or scan their QR code to verify
+                        their identity.</x-slot>
+
                     {{-- Native Header Actions for Selected Document --}}
                     <x-slot name="headerEnd">
                         <div class="flex items-center gap-3">
                             <x-filament::badge color="info" icon="heroicon-m-document-text">
                                 {{ $this->getSelectedDocumentName() }}
                             </x-filament::badge>
-                            
-                            <x-filament::button color="gray" variant="outline" size="sm" wire:click="backToDocumentSelect" icon="heroicon-m-pencil-square">
+
+                            <x-filament::button color="gray" variant="outline" size="sm"
+                                wire:click="backToDocumentSelect" icon="heroicon-m-pencil-square">
                                 Change
                             </x-filament::button>
                         </div>
                     </x-slot>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                        <livewire:officials.nfc-listener />
-                        <livewire:officials.nfc-resident-lookup />
+                    <div class="mb-6 flex items-center justify-between border-b pb-4 dark:border-white/5">
+                        <div class="flex items-center gap-2">
+                            <x-filament::button size="sm"
+                                color="{{ (!$useQrScanner && !$useManualLookup) ? 'primary' : 'gray' }}"
+                                variant="{{ (!$useQrScanner && !$useManualLookup) ? 'filled' : 'outline' }}"
+                                icon="heroicon-m-credit-card"
+                                wire:click="$set('useQrScanner', false); $set('useManualLookup', false);">
+                                NFC Tap
+                            </x-filament::button>
+
+                            <x-filament::button size="sm" color="{{ $useQrScanner ? 'primary' : 'gray' }}"
+                                variant="{{ $useQrScanner ? 'filled' : 'outline' }}" icon="heroicon-m-qr-code"
+                                wire:click="toggleQrScanner">
+                                QR Scan
+                            </x-filament::button>
+                        </div>
+
+                        {{-- Mode indicator --}}
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Verification Mode
+                        </span>
                     </div>
+
+                    @if($useQrScanner)
+                        <div class="max-w-md mx-auto">
+                            <x-qr-scanner on-scan="$wire.onScanResident(data)" />
+                        </div>
+                    @else
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                            <livewire:officials.nfc-listener />
+                            <livewire:officials.nfc-resident-lookup />
+                        </div>
+                    @endif
                 </x-filament::section>
             </div>
 
@@ -132,10 +167,14 @@
             @if($step === 3 && $resident)
                 <div class="p-6 space-y-6">
                     {{-- Selected Document Header --}}
-                    <div class="flex items-center justify-between p-4 bg-primary-50 dark:bg-primary-500/10 rounded-xl border border-primary-100 dark:border-primary-500/20">
+                    <div
+                        class="flex items-center justify-between p-4 bg-primary-50 dark:bg-primary-500/10 rounded-xl border border-primary-100 dark:border-primary-500/20">
                         <div>
-                            <p class="text-xs text-primary-600 dark:text-primary-400 font-semibold uppercase tracking-wider">Document to Process</p>
-                            <p class="text-base font-bold text-primary-800 dark:text-primary-300 mt-1">{{ $this->getSelectedDocumentName() }}</p>
+                            <p
+                                class="text-xs text-primary-600 dark:text-primary-400 font-semibold uppercase tracking-wider">
+                                Document to Process</p>
+                            <p class="text-base font-bold text-primary-800 dark:text-primary-300 mt-1">
+                                {{ $this->getSelectedDocumentName() }}</p>
                         </div>
                         <x-filament::button color="primary" variant="text" size="sm" wire:click="backToScan">
                             Re-scan Card
@@ -147,38 +186,44 @@
                         <x-slot name="heading">Resident Details</x-slot>
 
                         <div class="flex flex-col md:flex-row items-start gap-6">
-                            <div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center ring-1 ring-gray-950/10 dark:ring-white/20">
+                            <div
+                                class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center ring-1 ring-gray-950/10 dark:ring-white/20">
                                 @if($resident['profile_photo'] ?? null)
-                                    <img src="{{ $resident['profile_photo'] }}" alt="Profile" class="w-full h-full object-cover"/>
+                                    <img src="{{ $resident['profile_photo'] }}" alt="Profile"
+                                        class="w-full h-full object-cover" />
                                 @else
-                                    <span class="text-3xl font-bold text-gray-500 dark:text-gray-400">{{ $this->getInitials() }}</span>
+                                    <span
+                                        class="text-3xl font-bold text-gray-500 dark:text-gray-400">{{ $this->getInitials() }}</span>
                                 @endif
                             </div>
 
                             <div class="flex-1 w-full">
                                 <div class="flex items-center gap-3 flex-wrap mb-1">
-                                    <h3 class="text-xl font-bold text-gray-950 dark:text-white">{{ $resident['name'] ?? '—' }}</h3>
+                                    <h3 class="text-xl font-bold text-gray-950 dark:text-white">
+                                        {{ $resident['name'] ?? '—' }}</h3>
                                     <x-filament::badge color="success" icon="heroicon-m-check-circle">
                                         Verified
                                     </x-filament::badge>
                                 </div>
-                                <p class="text-sm font-mono text-gray-500 dark:text-gray-400 mb-4">{{ $resident['uuid'] ?? $uid }}</p>
+                                <p class="text-sm font-mono text-gray-500 dark:text-gray-400 mb-4">
+                                    {{ $resident['uuid'] ?? $uid }}</p>
 
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                                     @php
                                         $fields = [
-                                            ['Birthday',     $resident['birthdate_formal'] ?? $resident['birthdate'] ?? null],
-                                            ['Sex',          $resident['sex'] ?? null],
+                                            ['Birthday', $resident['birthdate_formal'] ?? $resident['birthdate'] ?? null],
+                                            ['Sex', $resident['sex'] ?? null],
                                             ['Civil Status', $resident['civil_status'] ?? null],
-                                            ['Mobile',       $resident['contact_number'] ?? null],
-                                            ['Birthplace',   $resident['birth_place'] ?? null],
-                                            ['Address',      $resident['address'] ?? null],
+                                            ['Mobile', $resident['contact_number'] ?? null],
+                                            ['Birthplace', $resident['birth_place'] ?? null],
+                                            ['Address', $resident['address'] ?? null],
                                         ];
                                     @endphp
                                     @foreach($fields as [$label, $value])
                                         <div>
                                             <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $label }}</p>
-                                            <p class="text-sm font-medium text-gray-950 dark:text-white truncate">{{ $value ?: '—' }}</p>
+                                            <p class="text-sm font-medium text-gray-950 dark:text-white truncate">
+                                                {{ $value ?: '—' }}</p>
                                         </div>
                                     @endforeach
                                 </div>
@@ -198,7 +243,8 @@
                         <x-slot name="description">Auto-filled values can be edited before submitting.</x-slot>
 
                         @if(empty($documentFields))
-                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No additional fields required for this document.</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No additional fields required for this
+                                document.</p>
                         @else
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                                 @foreach($documentFields as $field => $value)
@@ -207,13 +253,10 @@
                                             {{ $documentFieldLabels[$field] ?? \Illuminate\Support\Str::headline($field) }}
                                             <span class="text-danger-600">*</span>
                                         </label>
-                                        
-                                        <x-filament::input.wrapper :valid="!$errors->has('documentFields.'.$field)">
-                                            <x-filament::input
-                                                type="text"
-                                                wire:model="documentFields.{{ $field }}"
-                                                placeholder="Enter {{ strtolower($documentFieldLabels[$field] ?? \Illuminate\Support\Str::headline($field)) }}"
-                                            />
+
+                                        <x-filament::input.wrapper :valid="!$errors->has('documentFields.' . $field)">
+                                            <x-filament::input type="text" wire:model="documentFields.{{ $field }}"
+                                                placeholder="Enter {{ strtolower($documentFieldLabels[$field] ?? \Illuminate\Support\Str::headline($field)) }}" />
                                         </x-filament::input.wrapper>
 
                                         @error("documentFields.$field")
@@ -227,21 +270,19 @@
 
                     {{-- Action Buttons --}}
                     <div class="flex items-center justify-between pt-4">
-                        <x-filament::button color="gray" variant="outline" wire:click="backToScan" icon="heroicon-m-arrow-left">
+                        <x-filament::button color="gray" variant="outline" wire:click="backToScan"
+                            icon="heroicon-m-arrow-left">
                             Back
                         </x-filament::button>
 
                         <div class="flex items-center gap-4">
-                            <button wire:click="backToScan" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition underline">
+                            <button wire:click="backToScan"
+                                class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition underline">
                                 Wrong resident?
                             </button>
-                            
-                            <x-filament::button 
-                                wire:click="openSubmitConfirmation" 
-                                color="primary" 
-                                icon="heroicon-m-check-circle"
-                                wire:target="openSubmitConfirmation,submit"
-                            >
+
+                            <x-filament::button wire:click="openSubmitConfirmation" color="primary"
+                                icon="heroicon-m-check-circle" wire:target="openSubmitConfirmation,submit">
                                 <span wire:loading.remove wire:target="openSubmitConfirmation,submit">Submit Request</span>
                                 <span wire:loading wire:target="openSubmitConfirmation,submit">Processing...</span>
                             </x-filament::button>
@@ -268,7 +309,7 @@
                     <x-filament::button color="gray" variant="outline" wire:click="closeSubmitConfirmation">
                         Back
                     </x-filament::button>
-                    
+
                     <x-filament::button color="primary" wire:click="submit">
                         Confirm & Submit
                     </x-filament::button>

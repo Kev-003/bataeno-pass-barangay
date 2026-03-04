@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use Filament\Notifications\Notification;
+use App\Models\Barangay;
 
 class WalkInRequest extends Component
 {
@@ -20,16 +21,18 @@ class WalkInRequest extends Component
     public string $document_type = '';
     public string $purpose = '';
 
-    public bool    $connected  = false;
-    public ?string $uid        = null;
-    public ?array  $resident   = null;
-    public bool    $loading    = false;
-    public ?string $nfcError   = null;
-    public bool    $showCardConfirmationModal = false;
-    
+    public bool $connected = false;
+    public ?string $uid = null;
+    public ?array $resident = null;
+    public bool $loading = false;
+    public ?string $nfcError = null;
+    public bool $showCardConfirmationModal = false;
+    public bool $useQrScanner = false;
+    public bool $useManualLookup = false;
+
     // Step 4: Editable document fields
-    public array   $documentFields = [];
-    public array   $documentFieldLabels = [];
+    public array $documentFields = [];
+    public array $documentFieldLabels = [];
 
     // ── Step 1 actions ────────────────────────────────────────────────────────
 
@@ -54,7 +57,7 @@ class WalkInRequest extends Component
         $this->uid = null;
         $this->resident = null;
         $this->nfcError = null;
-        $this->loading  = false;
+        $this->loading = false;
         $this->showCardConfirmationModal = false;
         $this->documentFields = [];
         $this->documentFieldLabels = [];
@@ -99,7 +102,22 @@ class WalkInRequest extends Component
         $this->showCardConfirmationModal = false;
 
         try {
-            $resident = app(BataenoService::class)->findByCardUid($uid);
+            $bataeno = app(BataenoService::class);
+            $resident = $bataeno->findByCardUid($uid);
+
+            if (!$resident) {
+                // Case: Not in local DB. Let's try to verify against Portal and auto-register
+                $portalData = $bataeno->verifyCard($uid);
+                if ($portalData) {
+                    $barangayId = auth()->user()->getActiveBarangayId();
+                    if ($barangayId) {
+                        $user = $bataeno->registerToBarangay($portalData, $barangayId);
+                        // Re-lookup to get the full payload
+                        $resident = $bataeno->findByCardUid($uid);
+                        Log::info('WalkIn: Auto-registered portal resident', ['uid' => $uid, 'email' => $user->email]);
+                    }
+                }
+            }
 
             if ($resident) {
                 $this->resident = $resident;
@@ -108,8 +126,8 @@ class WalkInRequest extends Component
                 $this->step = 3;
                 Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
-                $this->nfcError = 'This card is not registered at this barangay. The resident must log in first to register.';
-                Log::info('WalkIn: UUID not in local DB', ['uid' => $uid]);
+                $this->nfcError = 'This card is not registered. Please ensure the resident is registered in the Bataan Portal.';
+                Log::info('WalkIn: Resident not found anywhere', ['uid' => $uid]);
             }
         } catch (\Exception $e) {
             $this->nfcError = 'Card lookup failed: ' . $e->getMessage();
@@ -126,10 +144,104 @@ class WalkInRequest extends Component
             $this->uid = null;
             $this->resident = null;
             $this->nfcError = null;
-            $this->loading  = false;
+            $this->loading = false;
             $this->showCardConfirmationModal = false;
             $this->documentFields = [];
             $this->documentFieldLabels = [];
+        }
+    }
+    public function toggleQrScanner(): void
+    {
+        $this->useQrScanner = !$this->useQrScanner;
+        $this->useManualLookup = false;
+        $this->uid = null;
+        $this->resident = null;
+        $this->nfcError = null;
+    }
+
+    public function toggleManualLookup(): void
+    {
+        $this->useManualLookup = !$this->useManualLookup;
+        $this->useQrScanner = false;
+        $this->uid = null;
+        $this->resident = null;
+        $this->nfcError = null;
+    }
+
+    #[On('resident-selected')]
+    public function onResidentSelected($resident): void
+    {
+        if ($this->step !== 2)
+            return;
+
+        $this->resident = $resident;
+        $this->uid = $resident['uuid'];
+        $this->populateDocumentFields($resident);
+        $this->step = 3;
+    }
+
+    public function onScanResident($data): void
+    {
+        if ($this->step !== 2)
+            return;
+
+        $this->nfcError = null;
+        $this->loading = true;
+
+        try {
+            // Try to check if it's a UUID
+            if (preg_match('/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i', $data)) {
+                $this->onVerifiedUid($data);
+                return;
+            }
+
+            $bataeno = app(BataenoService::class);
+
+            // Try the new verify-qr endpoint
+            $portalData = null;
+            try {
+                $portalData = $bataeno->verifyQr($data);
+            } catch (\Exception $e) {
+                Log::info('WalkIn: verify-qr failed, trying manual registration path', ['error' => $e->getMessage()]);
+            }
+
+            if ($portalData) {
+                $barangayId = auth()->user()->getActiveBarangayId();
+                if ($barangayId) {
+                    $user = $bataeno->registerToBarangay($portalData, $barangayId);
+                    if ($user->uuid) {
+                        $this->onVerifiedUid($user->uuid);
+                        return;
+                    }
+                }
+            }
+
+            $payload = json_decode($data, true);
+            if ($payload) {
+                // Case: Valid QR data but not in portal yet. Try to register to portal!
+                try {
+                    $registered = $bataeno->registerToPortal($payload);
+                    $portalData = $registered ? ($registered['user'] ?? $registered['data'] ?? $registered) : $payload;
+
+                    $barangayId = auth()->user()->getActiveBarangayId();
+                    if ($barangayId) {
+                        $user = $bataeno->registerToBarangay($portalData, $barangayId);
+                        if ($user->uuid) {
+                            $this->onVerifiedUid($user->uuid);
+                            return;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    throw new \RuntimeException('Portal Registration failed: ' . $e->getMessage());
+                }
+            }
+
+            $this->nfcError = 'Resident not found or invalid QR. Please ensure they are registered in the Bataan Portal.';
+        } catch (\Exception $e) {
+            $this->nfcError = 'Scan processing failed: ' . $e->getMessage();
+            Log::error('WalkIn Scan error', ['error' => $e->getMessage()]);
+        } finally {
+            $this->loading = false;
         }
     }
 
@@ -146,7 +258,7 @@ class WalkInRequest extends Component
 
     public function openSubmitConfirmation(): void
     {
-        if (! $this->resident) {
+        if (!$this->resident) {
             $this->nfcError = 'No verified resident details found.';
             $this->showCardConfirmationModal = false;
             return;

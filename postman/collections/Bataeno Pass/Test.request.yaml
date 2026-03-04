@@ -1,0 +1,23 @@
+$kind: http-request
+name: Test
+url: https://bataeno-pass-test.bataan.gov.ph/api/user
+method: POST
+body:
+  type: json
+  content: ""
+auth:
+  type: oauth2
+  credentials:
+    grant_type: authorization_code
+    clientId: "{{vault:client_id}}"
+    clientSecret: "{{vault:client_secret}}"
+    scope: find-user create-user
+    accessTokenUrl: "{{baseUrl}}/oauth/token"
+    tokenName: BataenoPass Token
+    authUrl: "{{baseUrl}}/oauth/authorize"
+    redirect_uri: http://localhost:8000/callback
+    client_authentication: body
+    useBrowser: true
+    refreshTokenUrl: "{{baseUrl}}/oauth/token"
+    addTokenTo: Header
+order: 1122035871777518

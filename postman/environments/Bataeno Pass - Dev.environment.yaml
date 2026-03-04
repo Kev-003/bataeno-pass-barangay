@@ -1,0 +1,20 @@
+name: Bataeno Pass - Dev
+values:
+  - key: baseUrl
+    value: 'https://bataeno-pass-test.bataan.gov.ph'
+    enabled: true
+  - key: token_url
+    value: '{{baseUrl}}/oauth/token'
+    enabled: true
+  - key: pcn
+    value: 4751-3890-4194-0315
+    enabled: true
+  - key: qr_payload
+    value: ''
+    enabled: true
+  - key: access_token
+    value: ''
+    enabled: true
+  - key: client_id
+    value: ''
+    enabled: true
