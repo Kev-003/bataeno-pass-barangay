@@ -1,6 +1,6 @@
 <div class="space-y-6">
     {{-- Mode Selection --}}
-    <div class="flex items-center justify-between border-b pb-4 dark:border-white/5">
+    <div class="flex items-center justify-between pb-4">
         <div class="flex items-center gap-2">
             <x-filament::button size="sm" color="{{ $this->useQrScanner ? 'primary' : 'gray' }}"
                 variant="{{ $this->useQrScanner ? 'filled' : 'outline' }}" icon="heroicon-m-qr-code"
@@ -20,13 +20,13 @@
         </span>
     </div>
 
-    {{-- scanner / Search Interface --}}
+    {{-- Scanner / Search Interface --}}
     @if($this->useManualLookup)
         <div class="max-w-xl mx-auto">
             <livewire:officials.manual-lookup-form />
 
             <p class="text-xs text-gray-500 mt-4 text-center">
-                Search the resident database by name or email to auto-fill registration fields.
+                Search the resident database by name and birthday to auto-fill registration fields.
             </p>
         </div>
     @else

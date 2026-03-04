@@ -1,0 +1,37 @@
+$kind: http-request
+name: test_11
+url: "{{baseUrl}}/api/user"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: first_name
+      value: Russel
+      description: ""
+      disabled: false
+    - type: text
+      key: last_name
+      value: Santos
+      description: ""
+      disabled: false
+    - type: text
+      key: middle_name
+      value: Francisco
+      description: ""
+      disabled: false
+    - type: text
+      key: ext_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: birthday
+      value: 2003-07-04
+      description: ""
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: "{{vault:token}}"
+order: 4500762437618004

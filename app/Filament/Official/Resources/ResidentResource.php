@@ -30,11 +30,24 @@ class ResidentResource extends Resource
         return [
             Forms\Components\Section::make('Basic Information')
                 ->schema([
+                    Forms\Components\TextInput::make('uuid')
+                        ->label('Portal UUID')
+                        ->disabled()
+                        ->dehydrated()
+                        ->placeholder('Auto-filled from portal')
+                        ->columnSpanFull(),
                     Forms\Components\TextInput::make('first_name')->required(),
                     Forms\Components\TextInput::make('middle_name'),
                     Forms\Components\TextInput::make('last_name')->required(),
+                    Forms\Components\TextInput::make('suffix')
+                        ->label('Suffix / Ext. Name')
+                        ->placeholder('Jr., Sr., III, etc.'),
                     Forms\Components\TextInput::make('email')->email()->unique(ignoreRecord: true),
+                    Forms\Components\TextInput::make('contact_number')
+                        ->label('Contact Number')
+                        ->tel(),
                     Forms\Components\DatePicker::make('date_of_birth'),
+                    Forms\Components\TextInput::make('place_of_birth'),
                     Forms\Components\Select::make('gender')
                         ->options([
                             'Male' => 'Male',
@@ -48,11 +61,45 @@ class ResidentResource extends Resource
                             'Separated' => 'Separated',
                         ])
                         ->required(),
+                    Forms\Components\TextInput::make('blood_type')
+                        ->placeholder('e.g. O+, A-, AB+'),
                     Forms\Components\TextInput::make('occupation'),
-                    Forms\Components\TextInput::make('contact_number'),
-                    Forms\Components\Hidden::make('uuid'),
-                    Forms\Components\Hidden::make('egov_data'),
                 ])->columns(2),
+
+            Forms\Components\Section::make('Location')
+                ->description('Municipality and barangay resolved from Portal or scan data.')
+                ->schema([
+                    Forms\Components\Select::make('municity_id')
+                        ->label('Municipality / City')
+                        ->relationship('municity', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->reactive(),
+                    Forms\Components\Select::make('barangay_id')
+                        ->label('Barangay')
+                        ->relationship(
+                            'barangay',
+                            'name',
+                            fn(Builder $query, $get) => $query->when(
+                                $get('municity_id'),
+                                fn($q, $municityId) => $q->where('municity_code', $municityId)
+                            )
+                        )
+                        ->searchable()
+                        ->preload(),
+                ])->columns(2),
+
+            Forms\Components\Section::make('Portal Data')
+                ->description('Auto-filled from Bataan Portal or PhilID scan.')
+                ->schema([
+                    Forms\Components\TextInput::make('profile_photos')
+                        ->label('Profile Photo URL')
+                        ->disabled()
+                        ->dehydrated()
+                        ->placeholder('Auto-filled from portal'),
+                    Forms\Components\Hidden::make('egov_data'),
+                ])->columns(1)
+                ->collapsed(),
 
             Forms\Components\Section::make('Lineage & Family')
                 ->description('Managing these fields will automatically update and clean up family records.')

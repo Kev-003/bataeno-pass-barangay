@@ -28,6 +28,52 @@ class CreateResident extends CreateRecord
         return $data;
     }
 
+    protected function beforeCreate(): void
+    {
+        $existing = $this->findExistingUser();
+
+        if ($existing) {
+            Notification::make()
+                ->title('Resident Already Exists')
+                ->danger()
+                ->body("This resident is already registered (ID #{$existing->id}: {$existing->name}). Please edit the existing record instead.")
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+    }
+
+    protected function getCreateFormAction(): \Filament\Actions\Action
+    {
+        $existing = $this->findExistingUser();
+
+        return parent::getCreateFormAction()
+            ->disabled(fn() => $existing !== null)
+            ->label($existing ? 'Resident Already Exists' : 'Create')
+            ->color($existing ? 'danger' : 'primary');
+    }
+
+    protected function findExistingUser(): ?User
+    {
+        $uuid = $this->data['uuid'] ?? null;
+        $email = $this->data['email'] ?? null;
+
+        if ($uuid) {
+            $found = User::where('uuid', $uuid)->first();
+            if ($found)
+                return $found;
+        }
+
+        if ($email) {
+            $found = User::where('email', $email)->first();
+            if ($found)
+                return $found;
+        }
+
+        return null;
+    }
+
     public bool $useQrScanner = true;
     public bool $useManualLookup = false;
 
@@ -62,7 +108,6 @@ class CreateResident extends CreateRecord
     #[On('resident-selected')]
     public function onResidentSelected($resident): void
     {
-        Log::info('Resident selected via manual lookup', ['data' => $resident]);
 
         $this->populateFromPortal($resident);
 
@@ -84,7 +129,6 @@ class CreateResident extends CreateRecord
         $bataeno = app(BataenoService::class);
         $mappedData = [];
 
-        Log::info('Processing QR scan', ['payload' => $rawString]);
 
         // 1. Try to decode the JSON first (PhilID VDS or eGovPH JSON Export)
         $data = json_decode($rawString, true);
@@ -92,57 +136,51 @@ class CreateResident extends CreateRecord
         $hasError = false;
         try {
             if ($data) {
-                Log::info('JSON decoded from QR', ['json' => $data]);
 
                 // Map immediately to get names for API search
                 $tempMapped = $bataeno->mapPortalData($data);
                 $govData = null;
 
                 if (!empty($tempMapped['first_name']) && !empty($tempMapped['last_name'])) {
-                    Log::info('Prioritizing Portal search (Name/Bday)', [
-                        'name' => $tempMapped['first_name'] . ' ' . $tempMapped['last_name'],
-                        'bday' => $tempMapped['date_of_birth'] ?? null
-                    ]);
-                    $govData = $bataeno->findUserByNameAndBirthday($tempMapped);
+
+
+                    try {
+                        // This now uses POST /api/user which finds OR creates the user
+                        $govData = $bataeno->findUserByNameAndBirthday($tempMapped);
+                    } catch (\Exception $e) {
+                        $hasError = true;
+                        Notification::make()
+                            ->title('Portal Connection Error')
+                            ->danger()
+                            ->body($e->getMessage())
+                            ->persistent()
+                            ->send();
+                        $govData = null;
+                    }
                 }
 
                 if (!$govData) {
-                    Log::info('Portal search failed. Trying direct verify-qr fallback.');
-                    $govData = $bataeno->verifyQr($rawString);
+                    try {
+                        $govData = $bataeno->verifyQr($rawString);
+                    } catch (\Exception $e) {
+                        $govData = null;
+                    }
                 }
 
                 if ($govData) {
-                    Log::info('Portal User found/resolved', ['data' => $govData]);
                     $mappedData = $bataeno->mapPortalData($govData);
                 } else {
-                    // Case B: Not in portal. Auto-register!
-                    Log::info('Resident not in portal. Attempting auto-registration to Portal.');
-                    $registered = $bataeno->registerToPortal($data);
-
-                    if ($registered) {
-                        Notification::make()
-                            ->title('Bataan Portal Registration')
-                            ->info()
-                            ->body('This resident has been automatically registered to the Bataan Portal.')
-                            ->send();
-
-                        $mappedData = $bataeno->mapPortalData($registered['user'] ?? $registered['data'] ?? $registered);
-                    } else {
-                        // Fallback to raw data if all else fails
-                        Log::info('All portal resolution failed. Falling back to raw scan data.');
-                        $mappedData = $tempMapped;
-                    }
+                    // All portal resolution failed — use the raw scan data
+                    $mappedData = $tempMapped;
                 }
             } else {
                 // Case C: Try the new verify-qr endpoint directly for non-JSON payloads
                 $govData = $bataeno->verifyQr($rawString);
 
                 if ($govData) {
-                    Log::info('Portal Verify-QR success', ['data' => $govData]);
                     $mappedData = $bataeno->mapPortalData($govData);
                 } elseif (preg_match('/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i', $rawString)) {
                     // Case D: Raw UUID fallback (verify-card)
-                    Log::info('UUID detected, attempting verify-card', ['uuid' => $rawString]);
                     $govData = $bataeno->verifyCard($rawString);
                     if ($govData) {
                         $mappedData = $bataeno->mapPortalData($govData);
@@ -154,7 +192,6 @@ class CreateResident extends CreateRecord
             }
         } catch (\Exception $e) {
             $hasError = true;
-            Log::error('Portal API Error during scan', ['message' => $e->getMessage()]);
             Notification::make()
                 ->title('Portal Connection Error')
                 ->danger()
@@ -172,7 +209,6 @@ class CreateResident extends CreateRecord
         $hasSignificantData = !empty($mappedData['first_name']) && !empty($mappedData['last_name']) && !empty($mappedData['date_of_birth']);
 
         if ($hasSignificantData) {
-            Log::info('Successful mapping from QR', ['mapped' => $mappedData]);
             $this->populateFromPortal($mappedData);
             $this->form->fill($this->data);
 
@@ -186,8 +222,6 @@ class CreateResident extends CreateRecord
 
             $this->dispatch('next-wizard-step');
         } else {
-            Log::warning('QR scan failed to map significant data');
-
             if (!$hasError) {
                 Notification::make()
                     ->title('Identification Failed')

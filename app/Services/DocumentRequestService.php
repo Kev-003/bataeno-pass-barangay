@@ -39,11 +39,6 @@ class DocumentRequestService
     {
         $officials = User::officialsForBarangay($transaction->barangay->barangay_code)->get();
 
-        \Log::info('Notifying officials', [
-            'count' => $officials->count(),
-            'ids' => $officials->pluck('id'),
-        ]);
-
         if ($officials->isEmpty())
             return;
 

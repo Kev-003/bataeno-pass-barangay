@@ -26,7 +26,7 @@ class BataenoAuthController extends Controller
             'client_id' => config('services.bataeno.client_id'),
             'redirect_uri' => config('services.bataeno.redirect'),
             'response_type' => 'code',
-            'scope' => 'view-user',
+            'scope' => 'view-user find-users',
             'state' => $state,
         ];
 
@@ -61,7 +61,7 @@ class BataenoAuthController extends Controller
 
         $tokens = $tokenResponse->json();
         $accessToken = $tokens['access_token'] ?? null;
-        //dd($accessToken);
+
         if (!$accessToken) {
             return redirect('/login')->withErrors(['bataeno' => 'No access token returned.']);
         }

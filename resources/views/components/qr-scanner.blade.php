@@ -63,7 +63,7 @@
         }
      }" 
      x-init="init()"
-     class="space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+     class="space-y-4 p-4">
 
     <div class="flex items-center gap-2">
         <x-filament::input.wrapper class="flex-1">

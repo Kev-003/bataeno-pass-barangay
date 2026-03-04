@@ -9,25 +9,25 @@ use Illuminate\Support\Facades\Log;
 class NfcResidentLookup extends Component
 {
     // ── Socket / NFC state ────────────────────────────────────────────────────
-    public bool    $connected   = false;
-    public ?string $cardUid     = null;
+    public bool $connected = false;
+    public ?string $cardUid = null;
     public ?string $verifiedUid = null;
 
     // ── Lookup state ──────────────────────────────────────────────────────────
-    public bool    $loading     = false;
-    public ?array  $resident    = null;
-    public ?string $error       = null;
-    public ?string $source      = null;   // 'bataeno' | 'local' | 'cache'
+    public bool $loading = false;
+    public ?array $resident = null;
+    public ?string $error = null;
+    public ?string $source = null;   // 'bataeno' | 'local' | 'cache'
 
     // ── Listeners (Livewire 3) ────────────────────────────────────────────────
     protected function getListeners(): array
     {
         return [
-            'nfc:connect'      => 'onConnect',
-            'nfc:disconnect'   => 'onDisconnect',
-            'nfc:cardUid'      => 'onCardUid',
-            'nfc:verifiedUid'  => 'onVerifiedUid',
-            'nfc:cardRemoved'  => 'onCardRemoved',
+            'nfc:connect' => 'onConnect',
+            'nfc:disconnect' => 'onDisconnect',
+            'nfc:cardUid' => 'onCardUid',
+            'nfc:verifiedUid' => 'onVerifiedUid',
+            'nfc:cardRemoved' => 'onCardRemoved',
         ];
     }
 
@@ -48,8 +48,8 @@ class NfcResidentLookup extends Component
         $this->cardUid = $uid;
         // A raw UID arrived — clear stale resident data while we wait
         $this->resident = null;
-        $this->error    = null;
-        $this->source   = null;
+        $this->error = null;
+        $this->source = null;
     }
 
     /**
@@ -59,50 +59,41 @@ class NfcResidentLookup extends Component
     public function onVerifiedUid(string $uid): void
     {
         $this->verifiedUid = $uid;
-        $this->cardUid     = $uid;
+        $this->cardUid = $uid;
         $this->lookupResident($uid);
     }
 
     public function onCardRemoved(): void
     {
-        $this->cardUid     = null;
+        $this->cardUid = null;
         $this->verifiedUid = null;
-        $this->resident    = null;
-        $this->error       = null;
-        $this->source      = null;
-        $this->loading     = false;
+        $this->resident = null;
+        $this->error = null;
+        $this->source = null;
+        $this->loading = false;
     }
 
     // ── Core lookup ───────────────────────────────────────────────────────────
 
     public function lookupResident(string $uid): void
     {
-        $this->loading  = true;
+        $this->loading = true;
         $this->resident = null;
-        $this->error    = null;
+        $this->error = null;
 
         try {
             /** @var BataenoService $service */
-            $service  = app(BataenoService::class);
+            $service = app(BataenoService::class);
             $resident = $service->findByCardUid($uid);
 
             if ($resident) {
                 $this->resident = $resident;
-                $this->source   = $resident['_source'] ?? 'bataeno';
-
-                Log::info('NFC resident lookup succeeded', [
-                    'uid'    => $uid,
-                    'name'   => $resident['name'] ?? null,
-                    'source' => $this->source,
-                ]);
+                $this->source = $resident['_source'] ?? 'bataeno';
             } else {
                 $this->error = 'No resident found for this card. The card may not be registered.';
-
-                Log::warning('NFC resident lookup returned null', ['uid' => $uid]);
             }
         } catch (\Exception $e) {
             $this->error = 'Lookup failed: ' . $e->getMessage();
-            Log::error('NFC resident lookup exception', ['uid' => $uid, 'error' => $e->getMessage()]);
         } finally {
             $this->loading = false;
         }
@@ -112,10 +103,11 @@ class NfcResidentLookup extends Component
 
     public function getInitials(): string
     {
-        if (! $this->resident) return '?';
+        if (!$this->resident)
+            return '?';
 
         $first = $this->resident['first_name'] ?? '';
-        $last  = $this->resident['last_name']  ?? '';
+        $last = $this->resident['last_name'] ?? '';
 
         return strtoupper(substr($first, 0, 1) . substr($last, 0, 1)) ?: '?';
     }

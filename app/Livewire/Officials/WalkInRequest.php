@@ -114,7 +114,6 @@ class WalkInRequest extends Component
                         $user = $bataeno->registerToBarangay($portalData, $barangayId);
                         // Re-lookup to get the full payload
                         $resident = $bataeno->findByCardUid($uid);
-                        Log::info('WalkIn: Auto-registered portal resident', ['uid' => $uid, 'email' => $user->email]);
                     }
                 }
             }
@@ -124,14 +123,11 @@ class WalkInRequest extends Component
                 // Auto-fill document fields from resident data
                 $this->populateDocumentFields($resident);
                 $this->step = 3;
-                Log::info('WalkIn: resident found', ['uid' => $uid, 'name' => $resident['name'] ?? null]);
             } else {
                 $this->nfcError = 'This card is not registered. Please ensure the resident is registered in the Bataan Portal.';
-                Log::info('WalkIn: Resident not found anywhere', ['uid' => $uid]);
             }
         } catch (\Exception $e) {
             $this->nfcError = 'Card lookup failed: ' . $e->getMessage();
-            Log::error('WalkIn NFC error', ['uid' => $uid, 'error' => $e->getMessage()]);
         } finally {
             $this->loading = false;
         }
@@ -202,7 +198,6 @@ class WalkInRequest extends Component
             try {
                 $portalData = $bataeno->verifyQr($data);
             } catch (\Exception $e) {
-                Log::info('WalkIn: verify-qr failed, trying manual registration path', ['error' => $e->getMessage()]);
             }
 
             if ($portalData) {
@@ -239,7 +234,6 @@ class WalkInRequest extends Component
             $this->nfcError = 'Resident not found or invalid QR. Please ensure they are registered in the Bataan Portal.';
         } catch (\Exception $e) {
             $this->nfcError = 'Scan processing failed: ' . $e->getMessage();
-            Log::error('WalkIn Scan error', ['error' => $e->getMessage()]);
         } finally {
             $this->loading = false;
         }
@@ -349,7 +343,6 @@ class WalkInRequest extends Component
         }
 
         if (!class_exists($modelClass)) {
-            Log::warning('WalkIn: document model class does not exist', ['modelClass' => $modelClass]);
             return;
         }
 

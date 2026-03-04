@@ -28,7 +28,6 @@ class NfcController extends Controller
         }
         // cache for 60 seconds by default
         Cache::put('nfc.latest', $data, 60);
-        Log::info('NFC latest set', ['uid' => $data['uid'] ?? null]);
         return response()->json(['message' => 'ok']);
     }
 
@@ -36,7 +35,8 @@ class NfcController extends Controller
     public function latest()
     {
         $val = Cache::get('nfc.latest');
-        if (! $val) return response()->noContent();
+        if (!$val)
+            return response()->noContent();
         return response()->json($val);
     }
 }

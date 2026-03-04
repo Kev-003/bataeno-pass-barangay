@@ -1,0 +1,37 @@
+$kind: http-request
+name: test_10
+url: "{{baseUrl}}/api/user"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: first_name
+      value: Russel
+      description: ""
+      disabled: false
+    - type: text
+      key: last_name
+      value: Santos
+      description: ""
+      disabled: false
+    - type: text
+      key: middle_name
+      value: Francisco
+      description: ""
+      disabled: false
+    - type: text
+      key: ext_name
+      value: ""
+      description: ""
+      disabled: false
+    - type: text
+      key: birthday
+      value: 2003-07-04
+      description: ""
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJhMTAxOGMyZS01Y2QxLTQ5MDktOWVmMS1jMDc1OTNjNjZjNjIiLCJqdGkiOiIxNmFjZWVhMzc1YjAwOTY1ZmQ2YWMyMzE0ZWNmYmI0YWYyNmRiZjVjZmQyMGUxMTQ1ZGFjNzhiZmRhOTFlMDA3OTFhODYxZWNkYWNjOGE5YiIsImlhdCI6MTc3MjYwNjc3OC4xNjg1MjYsIm5iZiI6MTc3MjYwNjc3OC4xNjg1MjksImV4cCI6MTc3MzkwMjc3OC4xMTAxNTEsInN1YiI6IjE4MzMzIiwic2NvcGVzIjpbInZpZXctdXNlciIsImZpbmQtdXNlcnMiXX0.auxbXCNxZN4WN92hZbYKxB0296SKZb9e-bSA7Aj03tpspV8Wtcn0VFf5tiHOz3ChuzQYZmirERV0VdjLFwBZCd5zDKMubve56WJc7FGhpphcTMaK_O5CqYmQ7jN-XUMCFpZYMBP9zwjd8QiLADpMdl73Icdy-ROto_62lfUHM1vYbWTt5uKCXcPFyUoL61zbunY2ecsxeTy3NusagvjSQkWtjmq2yeOkvUA0jnfae6-xBjK7OaPpXUp5fzcDcHWwYcjjN4ZrQ62EikUWbM0FMQon7HONukCVcEammjqrfCRaYStsZ_URtIfGCFZAs9NJW8wWHWBQdewOJ7Fde4WMb-yBgzMrhJPl_tnu-IgHCqWGMWq7E1l508c250mT5jXKMLi8Q1HDHFhysUoH-PVo1F_-JR61K3xqUf3Zqae3nX0RiOCRW5h4VnFUoyskxOxFTecWQp6cUnLeAPCU0NJUP2IyoPFw5Ps3kM_15jKWVY9GnvDEXoxKdrq9xobtkKVYeKs99HxKnictkjK6JFKcbGYhyT713lm2Fb4cNqZxDPNOaP_Cvt5G6dcf2Qoq5I5GrD5vn2vb53QF3ApiazMkDg442RMncOnzwHMoexyw0TGCAQEGsQ70vwYX2VJKb8V5jkJMjzMslYCtMNELhrCJGq_S5qg1Zb6FFtDJrt72fS0
+order: 4498833696108918

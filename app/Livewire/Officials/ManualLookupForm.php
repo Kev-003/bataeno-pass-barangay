@@ -6,101 +6,93 @@ use App\Models\User;
 use App\Services\BataenoService;
 use Livewire\Component;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class ManualLookupForm extends Component
 {
-    public string $search = '';
-    public array $results = [];
+    public string $first_name = '';
+    public string $middle_name = '';
+    public string $last_name = '';
+    public string $suffix = '';
+    public string $birthday = '';
 
-    public function updatedSearch()
+    public bool $loading = false;
+    public ?array $result = null;
+    public ?string $error = null;
+
+    public function lookup(): void
     {
-        if (strlen($this->search) < 3) {
-            $this->results = [];
-            return;
+        $this->validate([
+            'first_name' => 'required|string|min:2',
+            'last_name' => 'required|string|min:2',
+            'birthday' => 'required|date',
+        ]);
+
+        $this->loading = true;
+        $this->result = null;
+        $this->error = null;
+
+        try {
+            // First check local DB
+            $localUser = User::where('first_name', 'like', "%{$this->first_name}%")
+                ->where('last_name', 'like', "%{$this->last_name}%")
+                ->whereDate('date_of_birth', date('Y-m-d', strtotime($this->birthday)))
+                ->first();
+
+            if ($localUser) {
+                $bataeno = app(BataenoService::class);
+                $enriched = $bataeno->findByCardUid($localUser->uuid);
+
+                $this->result = $enriched ?? [
+                    'first_name' => $localUser->first_name,
+                    'middle_name' => $localUser->middle_name,
+                    'last_name' => $localUser->last_name,
+                    'suffix' => $localUser->suffix,
+                    'email' => $localUser->email,
+                    'uuid' => $localUser->uuid,
+                    'birthdate' => $localUser->date_of_birth,
+                    'sex' => $localUser->gender,
+                    'civil_status' => $localUser->civil_status,
+                    '_source' => 'local',
+                ];
+                return;
+            }
+
+            // Not found locally — try Portal API using POST /api/user
+            $bataeno = app(BataenoService::class);
+            $portalUser = $bataeno->findUserByNameAndBirthday([
+                'first_name' => $this->first_name,
+                'middle_name' => $this->middle_name,
+                'last_name' => $this->last_name,
+                'suffix' => $this->suffix,
+                'date_of_birth' => $this->birthday,
+            ]);
+
+            if ($portalUser) {
+                $mapped = $bataeno->mapPortalData($portalUser);
+                $this->result = $mapped;
+                return;
+            }
+
+            $this->error = 'No resident found matching these details in local database or Bataan Portal.';
+        } catch (\Exception $e) {
+            $this->error = 'Lookup failed: ' . $e->getMessage();
+        } finally {
+            $this->loading = false;
         }
-
-        // Local search
-        $localResults = User::query()
-            ->where(function ($query) {
-                $query->where('first_name', 'like', "%{$this->search}%")
-                    ->orWhere('last_name', 'like', "%{$this->search}%")
-                    ->orWhere('email', 'like', "%{$this->search}%");
-            })
-            ->limit(5)
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'uuid' => $user->uuid,
-                    'source' => 'Local Database',
-                ];
-            })
-            ->toArray();
-
-        // Portal search
-        $bataeno = app(BataenoService::class);
-        $portalResults = collect($bataeno->searchUsers($this->search))
-            ->take(5)
-            ->map(function ($res) {
-                return [
-                    'id' => null,
-                    'name' => $res['full_name'] ?? ($res['first_name'] . ' ' . $res['last_name']),
-                    'email' => $res['email'] ?? null,
-                    'uuid' => $res['uuid'] ?? null,
-                    'source' => 'Bataan Portal',
-                    'raw' => $res,
-                ];
-            })
-            ->toArray();
-
-        // Merge and unique by email
-        $this->results = collect($localResults)
-            ->merge($portalResults)
-            ->unique('email')
-            ->toArray();
     }
 
-    public function selectResident(string $uuid)
+    public function selectResult(): void
     {
-        $user = User::where('uuid', $uuid)->first();
-        $bataeno = app(BataenoService::class);
-
-        // If found locally, enrich we portal data if possible
-        if ($user) {
-            $resident = $bataeno->findByCardUid($uuid);
-            if ($resident) {
-                $this->dispatch('resident-selected', resident: $resident);
-            } else {
-                $this->dispatch('resident-selected', resident: [
-                    'first_name' => $user->first_name,
-                    'middle_name' => $user->middle_name,
-                    'last_name' => $user->last_name,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'uuid' => $user->uuid,
-                    'birthdate' => $user->date_of_birth,
-                    'sex' => $user->gender,
-                    'civil_status' => $user->civil_status,
-                    'address' => $user->location ?? null,
-                    '_source' => 'local',
-                ]);
-            }
+        if (!$this->result)
             return;
-        }
 
-        // If not found locally, check our portal results
-        $portalMatch = collect($this->results)->firstWhere('uuid', $uuid);
-        if ($portalMatch && isset($portalMatch['raw'])) {
-            $this->dispatch('resident-selected', resident: $bataeno->mapPortalData($portalMatch['raw']));
-            return;
-        }
+        $this->dispatch('resident-selected', resident: $this->result);
 
         Notification::make()
-            ->title('Error')
-            ->body('Resident record not found.')
-            ->danger()
+            ->title('Resident Found')
+            ->success()
+            ->body('Resident data has been pre-filled from the lookup.')
             ->send();
     }
 

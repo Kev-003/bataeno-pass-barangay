@@ -45,8 +45,6 @@ class DocumentApprovalService
         $cleanPath = str_replace('storage/app/', '', $filePath);
 
         if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($cleanPath)) {
-            // Log this so you can see it in storage/logs/laravel.log
-            \Log::warning("File not found for Base64: " . $cleanPath);
             return null;
         }
 
@@ -67,7 +65,6 @@ class DocumentApprovalService
         // Crawl path: barangays.municity_code (int FK) -> municipalities.id -> municipalities.municity_code (PSGC string)
         $psgcCode = $barangay->barangay_code;
         $psgcMunicity = $municipality?->municity_code; // The actual PSGC string on the municipalities table
-        \Log::info("Attempting to load Municipal Seal for code: " . $psgcMunicity);
 
 
         $signatureBase64 = null;

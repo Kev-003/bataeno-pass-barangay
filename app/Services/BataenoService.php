@@ -78,7 +78,6 @@ class BataenoService
         $user = User::where('uuid', $uid)->first();
 
         if (!$user) {
-            Log::info('NFC tap: UUID not registered in local DB', ['uid' => $uid]);
             return null; // Resident hasn't registered at this barangay yet
         }
 
@@ -106,7 +105,6 @@ class BataenoService
         $token = Session::get(self::SESSION_KEY);
 
         if (!$token) {
-            Log::debug('BataenoService: no session token, skipping card verification', ['uid' => $uid]);
             return null;
         }
 
@@ -137,10 +135,6 @@ class BataenoService
             return $result;
 
         } catch (\Exception $e) {
-            Log::error('Bataeno verify-card error', [
-                'uid' => $uid,
-                'error' => $e->getMessage(),
-            ]);
             throw $e;
         }
     }
@@ -154,7 +148,6 @@ class BataenoService
         $token = Session::get(self::SESSION_KEY);
 
         if (!$token) {
-            Log::debug('BataenoService: no session token, skipping QR verification');
             return null;
         }
 
@@ -177,7 +170,6 @@ class BataenoService
 
             $this->handleApiError($response, 'QR Verification');
         } catch (\Exception $e) {
-            Log::error('Bataeno verify-qr error', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -204,41 +196,10 @@ class BataenoService
         return $user;
     }
 
-    public function searchUsers(string $query): array
-    {
-        $token = Session::get(self::SESSION_KEY);
-
-        if (!$token) {
-            return [];
-        }
-
-        try {
-            $response = Http::withToken($token)
-                ->acceptJson()
-                ->timeout(8)
-                ->get("{$this->baseUrl}/api/users", [
-                    'q' => $query,
-                ]);
-
-            if ($response->status() === 401) {
-                $this->handleApiError($response, 'Portal Search');
-            }
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $data['data'] ?? $data;
-            }
-
-            $this->handleApiError($response, 'Portal Search');
-            return []; // Unreachable but satisfies lint
-        } catch (\Exception $e) {
-            Log::error('Bataeno searchUsers failed', ['error' => $e->getMessage()]);
-            throw $e;
-        }
-    }
-
     /**
-     * Look for a user in the portal using identity fields.
+     * Find or create a user in the Bataan Portal using identity fields.
+     * Uses POST /api/user with form-data (matching the portal's expected format).
+     * The portal returns the existing user if found, or creates a new one.
      */
     public function findUserByNameAndBirthday(array $data): ?array
     {
@@ -246,26 +207,49 @@ class BataenoService
         if (!$token)
             return null;
 
-        try {
-            // Search by name
-            $name = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
-            $results = $this->searchUsers($name);
+        $firstName = $data['first_name'] ?? null;
+        $lastName = $data['last_name'] ?? null;
+        $birthday = $data['date_of_birth'] ?? $data['birthday'] ?? null;
 
-            foreach ($results as $user) {
-                $portalBday = $user['birthday'] ?? $user['birthdate'] ?? null;
-                $searchBday = $data['date_of_birth'] ?? $data['birthday'] ?? null;
-
-                if ($portalBday && $searchBday) {
-                    if (date('Y-m-d', strtotime($portalBday)) === date('Y-m-d', strtotime($searchBday))) {
-                        return $user;
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Bataeno findUserByNameAndBirthday error', ['error' => $e->getMessage()]);
+        if (!$firstName || !$lastName) {
+            return null;
         }
 
-        return null;
+        // Normalize birthday to Y-m-d
+        if ($birthday) {
+            try {
+                $birthday = date('Y-m-d', strtotime($birthday));
+            } catch (\Exception $e) {
+            }
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->asMultipart()
+                ->timeout(10)
+                ->post("{$this->baseUrl}/api/user", [
+                    ['name' => 'first_name', 'contents' => $firstName],
+                    ['name' => 'last_name', 'contents' => $lastName],
+                    ['name' => 'middle_name', 'contents' => $data['middle_name'] ?? ''],
+                    ['name' => 'ext_name', 'contents' => $data['suffix'] ?? $data['ext_name'] ?? ''],
+                    ['name' => 'birthday', 'contents' => $birthday ?? ''],
+                ]);
+
+            if ($response->status() === 401) {
+                $this->handleApiError($response, 'Portal User Lookup');
+            }
+
+            if ($response->successful()) {
+                $result = $response->json();
+                return $result['user'] ?? $result['data'] ?? $result;
+            }
+
+            $this->handleApiError($response, 'Portal User Lookup');
+            return null;
+        } catch (\Exception $e) {
+            throw $e;
+        }
     }
 
     /**
@@ -276,7 +260,6 @@ class BataenoService
     {
         $token = Session::get(self::SESSION_KEY);
         if (!$token) {
-            Log::debug('BataenoService: no session token for registerToPortal');
             return null;
         }
 
@@ -285,20 +268,20 @@ class BataenoService
 
         // Required fields check: Portal expects at least first_name, last_name, and birthday
         if (empty($mapped['first_name']) || empty($mapped['last_name'])) {
-            Log::warning('Bataeno registerToPortal: Missing required identity fields', ['mapped' => $mapped]);
             return null;
         }
 
         try {
             $response = Http::withToken($token)
                 ->acceptJson()
+                ->asMultipart()
                 ->timeout(10)
                 ->post("{$this->baseUrl}/api/user", [
-                    'first_name' => $mapped['first_name'],
-                    'last_name' => $mapped['last_name'],
-                    'middle_name' => $mapped['middle_name'],
-                    'birthday' => $mapped['date_of_birth'],
-                    'ext_name' => $mapped['suffix'],
+                    ['name' => 'first_name', 'contents' => $mapped['first_name']],
+                    ['name' => 'last_name', 'contents' => $mapped['last_name']],
+                    ['name' => 'middle_name', 'contents' => $mapped['middle_name'] ?? ''],
+                    ['name' => 'ext_name', 'contents' => $mapped['suffix'] ?? ''],
+                    ['name' => 'birthday', 'contents' => $mapped['date_of_birth'] ?? ''],
                 ]);
 
             if ($response->status() === 401) {
@@ -306,13 +289,11 @@ class BataenoService
             }
 
             if ($response->successful()) {
-                Log::info('Bataeno Portal Registration Success', ['data' => $response->json()]);
                 return $response->json();
             }
 
             $this->handleApiError($response, 'Portal Registration');
         } catch (\Exception $e) {
-            Log::error('Bataeno registerToPortal error', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -329,7 +310,6 @@ class BataenoService
             ->get("{$this->baseUrl}/api/user");
 
         if ($response->failed()) {
-            Log::warning('Bataeno: /api/user fetch failed', ['status' => $response->status()]);
             return null;
         }
 
@@ -406,13 +386,14 @@ class BataenoService
             $govUserData = array_merge($govUserData, $govUserData['subject']);
         }
 
+        // ── Location ID Lookups ──
         $egovMunicityCode = $govUserData['municity_code'] ?? $govUserData['muncity_code'] ?? null;
         $egovBarangayCode = $govUserData['barangay_code'] ?? $govUserData['brgy_code'] ?? null;
 
         $municityId = $egovMunicityCode ? (\App\Models\Municipality::where('municity_code', $egovMunicityCode)->value('id')) : null;
         $barangayId = $egovBarangayCode ? (\App\Models\Barangay::where('barangay_code', $egovBarangayCode)->value('id')) : null;
 
-        // Try to find First Name
+        // ── Name Resolution ──
         $firstName = $govUserData['first_name']
             ?? $govUserData['fName']
             ?? $govUserData['given_name']
@@ -421,7 +402,6 @@ class BataenoService
             ?? $govUserData['givenName']
             ?? null;
 
-        // Try to find Last Name
         $lastName = $govUserData['last_name']
             ?? $govUserData['lName']
             ?? $govUserData['surname']
@@ -431,19 +411,23 @@ class BataenoService
             ?? $govUserData['familyName']
             ?? null;
 
-        // Try to find Middle Name
         $middleName = $govUserData['middle_name']
             ?? $govUserData['mName']
             ?? $govUserData['mname']
             ?? $govUserData['middleName']
             ?? null;
 
-        // Try to find Suffix
         $suffix = $govUserData['suffix']
             ?? $govUserData['ext_name']
             ?? $govUserData['extName']
             ?? $govUserData['extension_name']
+            ?? $govUserData['Suffix']
             ?? null;
+
+        // Treat empty string suffix as null
+        if ($suffix !== null && trim($suffix) === '') {
+            $suffix = null;
+        }
 
         // Fallback: If names are missing but we have full_name
         if (!$firstName && !empty($govUserData['full_name'])) {
@@ -457,10 +441,21 @@ class BataenoService
         }
 
         if (!$firstName || !$lastName) {
-            Log::debug('mapPortalData: Failed to resolve name fields', ['payload_keys' => array_keys($govUserData)]);
+            return null;
         }
 
-        // Civil Status Normalization
+        // ── Gender Normalization (MALE → Male, FEMALE → Female) ──
+        $genderRaw = $govUserData['sex'] ?? $govUserData['gender'] ?? $govUserData['Sex'] ?? null;
+        $gender = null;
+        if ($genderRaw) {
+            $gender = match (strtolower((string) $genderRaw)) {
+                'm', 'male' => 'Male',
+                'f', 'female' => 'Female',
+                default => ucfirst(strtolower((string) $genderRaw)),
+            };
+        }
+
+        // ── Civil Status Normalization (SINGLE → Single) ──
         $civilStatusRaw = $govUserData['civil_status'] ?? $govUserData['maritalStatus'] ?? $govUserData['status'] ?? 'Single';
         $civilStatus = 'Single';
         if ($civilStatusRaw) {
@@ -473,28 +468,84 @@ class BataenoService
             };
         }
 
+        // ── Blood Type from PhilID QR BF field ──
+        // PhilID encodes blood type as "[type,rh]"
+        // Type: 1=A, 2=B, 3=AB, 4=O | Rh: 7=+, 8=-
+        $bloodType = $govUserData['blood_type'] ?? null;
+        if (!$bloodType && isset($govUserData['BF'])) {
+            $bf = $govUserData['BF'];
+            // Parse "[1,7]" format
+            if (is_string($bf)) {
+                preg_match('/\[?\s*(\d)\s*,\s*(\d)\s*\]?/', $bf, $matches);
+                if (count($matches) === 3) {
+                    $typeMap = ['1' => 'A', '2' => 'B', '3' => 'AB', '4' => 'O'];
+                    $rhMap = ['7' => '+', '8' => '-'];
+                    $type = $typeMap[$matches[1]] ?? null;
+                    $rh = $rhMap[$matches[2]] ?? '';
+                    if ($type) {
+                        $bloodType = $type . $rh;
+                    }
+                }
+            }
+        }
+
+        // ── Profile Photo URL ──
+        // Portal returns profile_photos as an array with size variants
+        $profilePhotoUrl = null;
+        $profilePhotos = $govUserData['profile_photos'] ?? null;
+        if (is_array($profilePhotos)) {
+            $profilePhotoUrl = $profilePhotos['medium']
+                ?? $profilePhotos['large']
+                ?? $profilePhotos['original']
+                ?? $profilePhotos['small']
+                ?? null;
+        } elseif (is_string($profilePhotos)) {
+            $profilePhotoUrl = $profilePhotos;
+        }
+
+        // ── Birthday normalization (Y-m-d) ──
+        $birthday = $govUserData['birthday']
+            ?? $govUserData['birthdate']
+            ?? $govUserData['dob']
+            ?? $govUserData['DOB']
+            ?? null;
+        if ($birthday) {
+            try {
+                $birthday = date('Y-m-d', strtotime($birthday));
+            } catch (\Exception $e) {
+                // Keep raw value if parsing fails
+            }
+        }
+
         return [
-            'uuid' => $govUserData['uuid'] ?? $govUserData['id'] ?? null,
             // Identity
+            'uuid' => $govUserData['uuid'] ?? null,
             'first_name' => $firstName,
             'middle_name' => $middleName,
             'last_name' => $lastName,
             'suffix' => $suffix,
 
-            // Profile Details
-            'date_of_birth' => $govUserData['birthday'] ?? $govUserData['birthdate'] ?? $govUserData['dob'] ?? $govUserData['DOB'] ?? null,
+            // Personal Details
+            'date_of_birth' => $birthday,
             'place_of_birth' => $govUserData['birth_place'] ?? $govUserData['pob'] ?? $govUserData['POB'] ?? null,
-            'gender' => $govUserData['sex'] ?? $govUserData['gender'] ?? $govUserData['Sex'] ?? null,
+            'gender' => $gender,
             'civil_status' => $civilStatus,
-            'email' => $govUserData['email'] ?? null,
-            'contact_number' => $govUserData['mobile_number'] ?? $govUserData['mobile'] ?? $govUserData['contact_number'] ?? $govUserData['phone'] ?? null,
+            'blood_type' => $bloodType,
             'occupation' => $govUserData['occupation'] ?? null,
 
-            // Location IDs Lookups
+            // Contact
+            'email' => $govUserData['email'] ?? null,
+            'contact_number' => $govUserData['mobile_number'] ?? $govUserData['mobile'] ?? $govUserData['contact_number'] ?? $govUserData['phone'] ?? null,
+
+            // Location IDs
             'municity_id' => $municityId,
             'barangay_id' => $barangayId,
 
-            'egov_data' => $govUserData['identities'] ?? $govUserData ?? null,
+            // Profile Photo (URL from portal)
+            'profile_photos' => $profilePhotoUrl,
+
+            // Store full portal response for reference
+            'egov_data' => $govUserData,
         ];
     }
 

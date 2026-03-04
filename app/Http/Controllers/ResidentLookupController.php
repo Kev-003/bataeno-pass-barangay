@@ -20,7 +20,7 @@ class ResidentLookupController extends Controller
         $uid = $request->input('uid') ?? $request->json('uid');
         $q = $request->input('q') ?? $request->json('q');
 
-        if (! $uid && ! $q) {
+        if (!$uid && !$q) {
             return response()->json(['message' => 'uid or q is required'], 422);
         }
 
@@ -37,8 +37,7 @@ class ResidentLookupController extends Controller
         try {
             $resident = $this->fetchFromBataeno($uid, $q, $timeout);
         } catch (\Exception $e) {
-            Log::warning('Bataeno lookup failed: ' . $e->getMessage(), ['uid' => $uid, 'q' => $q]);
-            
+
             // Optionally fall back to local DB when configured
             if (filter_var(env('BATAENO_FALLBACK_LOCAL', false), FILTER_VALIDATE_BOOLEAN) && $uid) {
                 $user = User::where('uuid', $uid)
@@ -63,11 +62,12 @@ class ResidentLookupController extends Controller
             return response()->json(['message' => 'Remote lookup failed', 'error' => $e->getMessage()], 502);
         }
 
-        if (! $resident) {
+        if (!$resident) {
             return response()->json(['message' => 'Resident not found'], 404);
         }
 
-        if ($cacheKey) Cache::put($cacheKey, $resident, $cacheTtl);
+        if ($cacheKey)
+            Cache::put($cacheKey, $resident, $cacheTtl);
         return response()->json(['resident' => $resident, 'source' => 'bataeno']);
     }
 
@@ -76,7 +76,7 @@ class ResidentLookupController extends Controller
         $base = rtrim($this->getBataenoBaseUrl(), '/');
 
         $token = $this->getBataenoToken();
-        if (! $token) {
+        if (!$token) {
             throw new \RuntimeException('No access token for Bataeno');
         }
 
@@ -104,14 +104,15 @@ class ResidentLookupController extends Controller
         foreach ($endpoints as $ep) {
             $tried[] = $base . $ep;
             $res = $client->get($base . $ep);
-            
+
             if ($res->successful()) {
                 $json = $res->json();
                 $raw = $json['data'] ?? $json;
 
                 // If the endpoint returned a list, pick the first match
                 if (is_array($raw)) {
-                    if (empty($raw)) continue;
+                    if (empty($raw))
+                        continue;
                     $first = $raw[0];
                     return $this->normalizePayload($first);
                 }
@@ -125,7 +126,7 @@ class ResidentLookupController extends Controller
         if ($fallback->successful()) {
             $json = $fallback->json();
             $raw = $json['data'] ?? $json;
-            if (is_array($raw) && ! empty($raw)) {
+            if (is_array($raw) && !empty($raw)) {
                 return $this->normalizePayload($raw[0]);
             }
             return $this->normalizePayload($raw);
@@ -139,7 +140,8 @@ class ResidentLookupController extends Controller
         // Read env/config with fallbacks
         $cacheKey = 'bataeno_access_token';
         $cached = Cache::get($cacheKey);
-        if ($cached) return $cached;
+        if ($cached)
+            return $cached;
 
         $base = rtrim($this->getBataenoBaseUrl(), '/');
         $tokenUrl = $base . '/oauth/token';
@@ -191,13 +193,15 @@ class ResidentLookupController extends Controller
     protected function getBataenoUseBasicAuth()
     {
         $val = env('BATAENO_PASS_USE_BASIC_AUTH');
-        if (! is_null($val)) return filter_var($val, FILTER_VALIDATE_BOOLEAN);
+        if (!is_null($val))
+            return filter_var($val, FILTER_VALIDATE_BOOLEAN);
         return config('services.bataeno.use_basic_auth', false);
     }
 
     protected function normalizePayload($raw)
     {
-        if (!is_array($raw)) return null;
+        if (!is_array($raw))
+            return null;
 
         // Try common shapes
         $data = $raw['data'] ?? $raw;
