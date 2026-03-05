@@ -62,12 +62,17 @@ Route::get('/document-test', function () {
 });
 
 // The link you put on your "Login with Bataeno Pass" button
-Route::get('/auth/bataeno', [BataenoAuthController::class, 'redirect'])->name('bataeno.login');
+Route::get('/auth/bataeno', [BataenoAuthController::class, 'redirect'])
+    ->name('bataeno.login')
+    ->middleware('throttle:6,1');
 
 // The link the government website sends the user back to
-Route::get('/callback', [BataenoAuthController::class, 'callback']);
+Route::get('/callback', [BataenoAuthController::class, 'callback'])
+    ->middleware('throttle:auth');
 
-Route::view('login', 'livewire.pages.auth.login')->name('bataeno.login');
+Route::view('login', 'livewire.pages.auth.login')
+    ->name('bataeno.login')
+    ->middleware('throttle:auth');
 
 // Standard Resident Dashboard
 Route::middleware(['auth'])->get('/dashboard', function () {
@@ -103,8 +108,13 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-Route::get('/document-request', DocumentRequestForm::class)->name('document.request');
-Route::post('/document-request', [DocumentRequestController::class, 'store'])->name('document-request.store');
+Route::get('/document-request', DocumentRequestForm::class)
+    ->name('document.request')
+    ->middleware('throttle:document-request');
+
+Route::post('/document-request', [DocumentRequestController::class, 'store'])
+    ->name('document-request.store')
+    ->middleware('throttle:document-request');
 
 Route::get('documents/temp/{path}', function (Request $request, string $path) {
     $transaction = \App\Models\DocumentTransaction::where('file_path', $path)->firstOrFail();
@@ -148,11 +158,16 @@ require __DIR__ . '/auth.php';
 
 // NFC/resident lookup used by the NFC scanner frontend
 // Match allows both GET (for browser testing) and POST (for the JS fetch API) safely
-Route::match(['get', 'post'], '/residents/lookup', ResidentLookupController::class)->name('residents.lookup');
+Route::match(['get', 'post'], '/residents/lookup', ResidentLookupController::class)
+    ->name('residents.lookup')
+    ->middleware('throttle:lookup');
 
 // Endpoints used by external NFC client to push latest resident data
-Route::post('/nfc/set', [App\Http\Controllers\NfcController::class, 'setLatest']);
-Route::get('/nfc/latest', [App\Http\Controllers\NfcController::class, 'latest']);
+Route::post('/nfc/set', [App\Http\Controllers\NfcController::class, 'setLatest'])
+    ->middleware('throttle:lookup');
+
+Route::get('/nfc/latest', [App\Http\Controllers\NfcController::class, 'latest'])
+    ->middleware('throttle:lookup');
 
 // NFC scanner page — use Livewire `NfcListener` component directly
 Route::get('/nfc-scanner', \App\Livewire\Officials\NfcListener::class)->name('nfc.scanner');
