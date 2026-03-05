@@ -27,19 +27,82 @@ class HouseholdResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('house_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('household_head_id')
-                    ->numeric(),
-                Forms\Components\TextInput::make('ownership')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('monthly_utility_expense')
-                    ->numeric(),
-                Forms\Components\TextInput::make('total_income')
-                    ->numeric(),
-                Forms\Components\DateTimePicker::make('expires_at'),
+                Forms\Components\Section::make('Location')
+                    ->schema([
+                        Forms\Components\Select::make('house_id')
+                            ->relationship('house', 'street')
+                            ->getOptionLabelFromRecordUsing(fn($record) => ($record->housing_unit ? "{$record->housing_unit}, " : "") . $record->street)
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ]),
+                Forms\Components\Section::make('Management')
+                    ->schema([
+                        Forms\Components\Select::make('household_head_id')
+                            ->label('Head of Household')
+                            ->relationship('members', 'id')
+                            ->getOptionLabelFromRecordUsing(fn($record) => $record->user?->name ?? "Member #{$record->id}")
+                            ->searchable()
+                            ->preload(),
+                        Forms\Components\TextInput::make('ownership')
+                            ->required()
+                            ->maxLength(255),
+                    ])->columns(2),
+                Forms\Components\Section::make('Financials')
+                    ->schema([
+                        Forms\Components\TextInput::make('monthly_utility_expense')
+                            ->numeric()
+                            ->prefix('₱'),
+                        Forms\Components\TextInput::make('total_income')
+                            ->numeric()
+                            ->prefix('₱'),
+                        Forms\Components\DateTimePicker::make('expires_at'),
+                    ])->columns(3),
+            ]);
+    }
+
+    public static function infolist(\Filament\Infolists\Infolist $infolist): \Filament\Infolists\Infolist
+    {
+        return $infolist
+            ->schema([
+                \Filament\Infolists\Components\Section::make('House Details')
+                    ->icon('heroicon-o-home')
+                    ->schema([
+                        \Filament\Infolists\Components\TextEntry::make('house.address')
+                            ->label('Full Address')
+                            ->state(fn($record) => ($record->house->housing_unit ? "{$record->house->housing_unit}, " : "") . $record->house->street . ($record->house->subdivision ? ", {$record->house->subdivision}" : "")),
+                        \Filament\Infolists\Components\TextEntry::make('house.street')
+                            ->label('Street Name'),
+                    ])->columns(2),
+
+                \Filament\Infolists\Components\Section::make('Household Head')
+                    ->icon('heroicon-o-user')
+                    ->schema([
+                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.name')
+                            ->label('Name')
+                            ->placeholder('No head assigned')
+                            ->weight('bold')
+                            ->color('primary'),
+                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.email')
+                            ->label('Email'),
+                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.contact_number')
+                            ->label('Contact Number'),
+                        \Filament\Infolists\Components\TextEntry::make('ownership')
+                            ->badge()
+                            ->color('info'),
+                    ])->columns(2),
+
+                \Filament\Infolists\Components\Section::make('Financial Information')
+                    ->icon('heroicon-o-banknotes')
+                    ->schema([
+                        \Filament\Infolists\Components\TextEntry::make('monthly_utility_expense')
+                            ->money('PHP'),
+                        \Filament\Infolists\Components\TextEntry::make('total_income')
+                            ->money('PHP'),
+                        \Filament\Infolists\Components\TextEntry::make('expires_at')
+                            ->dateTime()
+                            ->placeholder('Never'),
+                    ])->columns(3),
             ]);
     }
 
@@ -47,36 +110,32 @@ class HouseholdResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('house_id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('house.address')
+                    ->label('Address')
+                    ->state(fn($record) => ($record->house->housing_unit ? "{$record->house->housing_unit}, " : "") . $record->house->street)
+                    ->searchable(['housing_unit', 'street'])
                     ->sortable(),
-                Tables\Columns\TextColumn::make('household_head_id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('headOfHousehold.user.name')
+                    ->label('Head of Household')
+                    ->placeholder('None')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('ownership')
+                    ->badge()
+                    ->color('info')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('monthly_utility_expense')
-                    ->numeric()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('total_income')
-                    ->numeric()
+                    ->money('PHP')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('expires_at')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('members_count')
+                    ->label('Members')
+                    ->counts('members')
+                    ->badge(),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

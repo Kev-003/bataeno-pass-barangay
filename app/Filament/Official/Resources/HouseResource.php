@@ -22,6 +22,7 @@ class HouseResource extends Resource
     protected static ?string $navigationGroup = 'Management';
 
     protected static ?string $tenantRelationshipName = 'barangay';
+    protected static ?string $tenantIdAttribute = 'barangay_id';
 
     public static function form(Form $form): Form
     {
@@ -41,20 +42,11 @@ class HouseResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('barangay_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('barangay_code')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('municity_code')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('housing_unit')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('street')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('subdivision')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('barangay')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -69,6 +61,16 @@ class HouseResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('view_inhabitants')
+                    ->label('Inhabitants')
+                    ->icon('heroicon-o-users')
+                    ->color('info')
+                    ->modalHeading(fn(House $record) => "Residents of " . ($record->housing_unit ? "{$record->housing_unit}, " : "") . $record->street)
+                    ->modalContent(fn(House $record) => view('filament.official.resources.house.inhabitants', [
+                        'house' => $record->load('households.members.user'),
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalWidth('4xl'),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
