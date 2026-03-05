@@ -75,22 +75,43 @@ class HouseholdResource extends Resource
                             ->label('Street Name'),
                     ])->columns(2),
 
-                \Filament\Infolists\Components\Section::make('Household Head')
-                    ->icon('heroicon-o-user')
+                \Filament\Infolists\Components\Section::make('Household Management')
+                    ->icon('heroicon-o-user-group')
                     ->schema([
-                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.name')
-                            ->label('Name')
-                            ->placeholder('No head assigned')
-                            ->weight('bold')
-                            ->color('primary'),
-                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.email')
-                            ->label('Email'),
-                        \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.contact_number')
-                            ->label('Contact Number'),
-                        \Filament\Infolists\Components\TextEntry::make('ownership')
-                            ->badge()
-                            ->color('info'),
-                    ])->columns(2),
+                        \Filament\Infolists\Components\Grid::make(2)
+                            ->schema([
+                                \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.name')
+                                    ->label('Head of Household')
+                                    ->placeholder('No head assigned')
+                                    ->weight('bold')
+                                    ->color('primary'),
+                                \Filament\Infolists\Components\TextEntry::make('ownership')
+                                    ->badge()
+                                    ->color('info'),
+                            ]),
+                        \Filament\Infolists\Components\RepeatableEntry::make('members')
+                            ->label('Other Members')
+                            ->schema([
+                                \Filament\Infolists\Components\Grid::make(3)
+                                    ->schema([
+                                        \Filament\Infolists\Components\TextEntry::make('user.name')
+                                            ->label('')
+                                            ->weight('medium')
+                                            ->color('gray')
+                                            ->grow(true),
+                                        \Filament\Infolists\Components\TextEntry::make('role')
+                                            ->label('')
+                                            ->badge()
+                                            ->color('info')
+                                            ->placeholder('Member'),
+                                    ])
+                            ])
+                            ->contained(false) // Keeps it "thin" and avoids double borders
+                            ->state(function (Household $record) {
+                                return $record->members->where('id', '!=', $record->household_head_id);
+                            })
+                            ->placeholder('No other members registered')
+                    ]),
 
                 \Filament\Infolists\Components\Section::make('Financial Information')
                     ->icon('heroicon-o-banknotes')
