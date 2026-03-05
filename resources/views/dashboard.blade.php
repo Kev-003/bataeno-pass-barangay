@@ -17,7 +17,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg sm:p-8 lg:p-12">
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg p-12">
                 <a href="{{ route('document.request') }}"
                     class="group relative flex h-48 w-full flex-col items-start justify-end overflow-hidden rounded-2xl bg-orange-500 p-6 transition-all hover:scale-[1.02] hover:shadow-lg sm:w-64">
 

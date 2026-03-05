@@ -73,7 +73,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Official Barangay Portal</p>
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Official Bataan Portal</p>
                 <p class="text-[11px] font-semibold tracking-[.2em] uppercase opacity-50">&copy; {{ date('Y') }}
                     Provincial Government of Bataan</p>
             </div>

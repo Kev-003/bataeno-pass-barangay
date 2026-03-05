@@ -13,28 +13,31 @@ export default function initDotGrid() {
     let dots = [];
 
     const config = {
-        dotSize: 3,
-        gap: 36,
-        baseColor: "#5369a3bb",
-        activeColor: "#599bec",
-        proximity: 150,
-        returnDuration: 1.2,
+        dotSize: 2,
+        gap: 42,
+        baseColor: "#e2e8f033",
+        activeColor: "#60a5fa",
+        proximity: 180,
+        returnDuration: 0.8,
     };
 
     let baseRgb = hexToRgb(config.baseColor);
     let activeRgb = hexToRgb(config.activeColor);
 
-    const pointer = { x: 0, y: 0 };
+    const pointer = { x: -1000, y: -1000 };
 
     function hexToRgb(hex) {
-        const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+        const m = hex.match(
+            /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})?$/i,
+        );
         return m
             ? {
                   r: parseInt(m[1], 16),
                   g: parseInt(m[2], 16),
                   b: parseInt(m[3], 16),
+                  a: m[4] ? parseInt(m[4], 16) / 255 : 1,
               }
-            : { r: 50, g: 50, b: 150 };
+            : { r: 50, g: 50, b: 150, a: 1 };
     }
 
     function buildGrid() {
@@ -79,7 +82,7 @@ export default function initDotGrid() {
             const dy = dot.cy - pointer.y;
             const dsq = dx * dx + dy * dy;
 
-            let style = config.baseColor;
+            let style;
             let radius = config.dotSize / 2;
 
             if (dsq <= proxSq) {
@@ -88,8 +91,11 @@ export default function initDotGrid() {
                 const r = Math.round(baseRgb.r + (activeRgb.r - baseRgb.r) * t);
                 const g = Math.round(baseRgb.g + (activeRgb.g - baseRgb.g) * t);
                 const b = Math.round(baseRgb.b + (activeRgb.b - baseRgb.b) * t);
-                style = `rgb(${r},${g},${b})`;
-                radius = radius * (1 + t * 1.5); // Slightly larger when active
+                const a = baseRgb.a + (activeRgb.a - baseRgb.a) * t;
+                style = `rgba(${r},${g},${b},${a})`;
+                radius = radius * (1 + t * 2);
+            } else {
+                style = `rgba(${baseRgb.r},${baseRgb.g},${baseRgb.b},${baseRgb.a})`;
             }
 
             ctx.fillStyle = style;
@@ -107,6 +113,14 @@ export default function initDotGrid() {
     }
 
     const handleMouseMove = (e) => {
+        // Disable interaction on mobile/touch devices
+        if (
+            window.matchMedia("(pointer: coarse)").matches ||
+            window.innerWidth < 768
+        ) {
+            return;
+        }
+
         const rect = canvas.getBoundingClientRect();
         pointer.x = e.clientX - rect.left;
         pointer.y = e.clientY - rect.top;
