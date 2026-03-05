@@ -5,74 +5,71 @@
             Bataan Portal.</p>
     </div>
 
-    <form wire:submit="lookup" class="space-y-4">
-        <div class="grid grid-cols-2 gap-6">
-            {{-- First Name --}}
-            <div class="space-y-2">
-                <label for="first_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
-                    First Name <span class="text-danger-600">*</span>
-                </label>
-                <x-filament::input.wrapper :valid="!$errors->has('first_name')">
-                    <x-filament::input type="text" id="first_name" wire:model="first_name" placeholder="e.g. JUAN"
-                        required />
-                </x-filament::input.wrapper>
-                @error('first_name') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Last Name --}}
-            <div class="space-y-2">
-                <label for="last_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
-                    Last Name <span class="text-danger-600">*</span>
-                </label>
-                <x-filament::input.wrapper :valid="!$errors->has('last_name')">
-                    <x-filament::input type="text" id="last_name" wire:model="last_name" placeholder="e.g. DELA CRUZ"
-                        required />
-                </x-filament::input.wrapper>
-                @error('last_name') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Middle Name --}}
-            <div class="space-y-2">
-                <label for="middle_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
-                    Middle Name
-                </label>
-                <x-filament::input.wrapper>
-                    <x-filament::input type="text" id="middle_name" wire:model="middle_name"
-                        placeholder="e.g. SANTOS" />
-                </x-filament::input.wrapper>
-            </div>
-
-            {{-- Suffix --}}
-            <div class="space-y-2">
-                <label for="suffix" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
-                    Suffix
-                </label>
-                <x-filament::input.wrapper>
-                    <x-filament::input type="text" id="suffix" wire:model="suffix" placeholder="e.g. Jr., Sr., III" />
-                </x-filament::input.wrapper>
-            </div>
-
-            {{-- Birthday --}}
-            <div class="space-y-2">
-                <label for="birthday" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
-                    Birthday <span class="text-danger-600">*</span>
-                </label>
-                <x-filament::input.wrapper :valid="!$errors->has('birthday')">
-                    <x-filament::input type="date" id="birthday" wire:model="birthday" required />
-                </x-filament::input.wrapper>
-                @error('birthday') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Submit --}}
-            <div class="flex items-end mb-1">
-                <x-filament::button type="submit" class="w-full" wire:loading.attr="disabled" wire:target="lookup"
-                    icon="heroicon-m-magnifying-glass">
-                    <span wire:loading.remove wire:target="lookup">Search Portal</span>
-                    <span wire:loading wire:target="lookup">Searching...</span>
-                </x-filament::button>
-            </div>
+    <div class="grid grid-cols-2 gap-6">
+        {{-- First Name --}}
+        <div class="space-y-2">
+            <label for="first_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
+                First Name <span class="text-danger-600">*</span>
+            </label>
+            <x-filament::input.wrapper :valid="!$errors->has('first_name')">
+                <x-filament::input type="text" id="first_name" wire:model="first_name" placeholder="e.g. JUAN"
+                    required />
+            </x-filament::input.wrapper>
+            @error('first_name') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
         </div>
-    </form>
+
+        {{-- Last Name --}}
+        <div class="space-y-2">
+            <label for="last_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
+                Last Name <span class="text-danger-600">*</span>
+            </label>
+            <x-filament::input.wrapper :valid="!$errors->has('last_name')">
+                <x-filament::input type="text" id="last_name" wire:model="last_name" placeholder="e.g. DELA CRUZ"
+                    required />
+            </x-filament::input.wrapper>
+            @error('last_name') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
+        </div>
+
+        {{-- Middle Name --}}
+        <div class="space-y-2">
+            <label for="middle_name" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
+                Middle Name
+            </label>
+            <x-filament::input.wrapper>
+                <x-filament::input type="text" id="middle_name" wire:model="middle_name" placeholder="e.g. SANTOS" />
+            </x-filament::input.wrapper>
+        </div>
+
+        {{-- Suffix --}}
+        <div class="space-y-2">
+            <label for="suffix" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
+                Suffix
+            </label>
+            <x-filament::input.wrapper>
+                <x-filament::input type="text" id="suffix" wire:model="suffix" placeholder="e.g. Jr., Sr., III" />
+            </x-filament::input.wrapper>
+        </div>
+
+        {{-- Birthday --}}
+        <div class="space-y-2">
+            <label for="birthday" class="text-sm font-medium leading-6 text-gray-950 dark:text-white">
+                Birthday <span class="text-danger-600">*</span>
+            </label>
+            <x-filament::input.wrapper :valid="!$errors->has('birthday')">
+                <x-filament::input type="date" id="birthday" wire:model="birthday" required />
+            </x-filament::input.wrapper>
+            @error('birthday') <p class="text-xs text-danger-600">{{ $message }}</p> @enderror
+        </div>
+
+        {{-- Submit --}}
+        <div class="flex items-end mb-1">
+            <x-filament::button wire:click="lookup" type="button" class="w-full" wire:loading.attr="disabled"
+                wire:target="lookup" icon="heroicon-m-magnifying-glass">
+                <span wire:loading.remove wire:target="lookup">Search Portal</span>
+                <span wire:loading wire:target="lookup">Searching...</span>
+            </x-filament::button>
+        </div>
+    </div>
 
     {{-- Error Display --}}
     @if($error)

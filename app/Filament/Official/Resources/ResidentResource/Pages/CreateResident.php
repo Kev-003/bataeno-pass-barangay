@@ -106,7 +106,7 @@ class CreateResident extends CreateRecord
     }
 
     #[On('resident-selected')]
-    public function onResidentSelected($resident): void
+    public function onResidentSelected(array $resident): void
     {
 
         $this->populateFromPortal($resident);

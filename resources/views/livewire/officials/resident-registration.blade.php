@@ -23,7 +23,7 @@
     {{-- Scanner / Search Interface --}}
     @if($this->useManualLookup)
         <div class="max-w-xl mx-auto">
-            <livewire:officials.manual-lookup-form />
+            @livewire('officials.manual-lookup-form')
 
             <p class="text-xs text-gray-500 mt-4 text-center">
                 Search the resident database by name and birthday to auto-fill registration fields.

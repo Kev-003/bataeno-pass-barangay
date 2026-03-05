@@ -32,34 +32,15 @@ class ManualLookupForm extends Component
         $this->result = null;
         $this->error = null;
 
+        $bataeno = app(BataenoService::class);
+
         try {
-            // First check local DB
-            $localUser = User::where('first_name', 'like', "%{$this->first_name}%")
-                ->where('last_name', 'like', "%{$this->last_name}%")
-                ->whereDate('date_of_birth', date('Y-m-d', strtotime($this->birthday)))
-                ->first();
 
-            if ($localUser) {
-                $bataeno = app(BataenoService::class);
-                $enriched = $bataeno->findByCardUid($localUser->uuid);
-
-                $this->result = $enriched ?? [
-                    'first_name' => $localUser->first_name,
-                    'middle_name' => $localUser->middle_name,
-                    'last_name' => $localUser->last_name,
-                    'suffix' => $localUser->suffix,
-                    'email' => $localUser->email,
-                    'uuid' => $localUser->uuid,
-                    'birthdate' => $localUser->date_of_birth,
-                    'sex' => $localUser->gender,
-                    'civil_status' => $localUser->civil_status,
-                    '_source' => 'local',
-                ];
-                return;
-            }
-
-            // Not found locally — try Portal API using POST /api/user
-            $bataeno = app(BataenoService::class);
+            Log::info('LOOKUP STARTED', [
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+                'birthday' => $this->birthday,
+            ]);
             $portalUser = $bataeno->findUserByNameAndBirthday([
                 'first_name' => $this->first_name,
                 'middle_name' => $this->middle_name,
@@ -67,14 +48,42 @@ class ManualLookupForm extends Component
                 'suffix' => $this->suffix,
                 'date_of_birth' => $this->birthday,
             ]);
+            Log::info('PORTAL RESULT', ['portalUser' => $portalUser]);
 
             if ($portalUser) {
-                $mapped = $bataeno->mapPortalData($portalUser);
-                $this->result = $mapped;
-                return;
+                $this->result = $bataeno->mapPortalData($portalUser);
+            } else {
+                $localUser = User::where('first_name', 'like', "%{$this->first_name}%")
+                    ->where('last_name', 'like', "%{$this->last_name}%")
+                    ->whereDate('date_of_birth', date('Y-m-d', strtotime($this->birthday)))
+                    ->first();
+                Log::info('LOCAL RESULT', ['localUser' => $localUser?->toArray()]);
+
+                if ($localUser) {
+                    $this->result = [
+                        'first_name' => $localUser->first_name,
+                        'middle_name' => $localUser->middle_name,
+                        'last_name' => $localUser->last_name,
+                        'suffix' => $localUser->suffix,
+                        'email' => $localUser->email,
+                        'uuid' => $localUser->uuid,
+                        'date_of_birth' => optional($localUser->date_of_birth)->format('Y-m-d'),
+                        'gender' => $localUser->gender,
+                        'civil_status' => $localUser->civil_status,
+                        'contact_number' => $localUser->contact_number,
+                        '_source' => 'local',
+                    ];
+                } else {
+                    $this->error = 'No resident found matching these details.';
+                }
             }
 
-            $this->error = 'No resident found matching these details in local database or Bataan Portal.';
+            // Dispatch immediately if we got a result — no separate confirm step needed
+            if ($this->result) {
+                Log::info('DISPATCH FIRING', ['result' => $this->result]);
+                $this->dispatch('resident-selected', resident: $this->result);
+            }
+
         } catch (\Exception $e) {
             $this->error = 'Lookup failed: ' . $e->getMessage();
         } finally {
@@ -84,16 +93,9 @@ class ManualLookupForm extends Component
 
     public function selectResult(): void
     {
-        if (!$this->result)
-            return;
-
-        $this->dispatch('resident-selected', resident: $this->result);
-
-        Notification::make()
-            ->title('Resident Found')
-            ->success()
-            ->body('Resident data has been pre-filled from the lookup.')
-            ->send();
+        if ($this->result) {
+            $this->dispatch('resident-selected', resident: $this->result);
+        }
     }
 
     public function render()
