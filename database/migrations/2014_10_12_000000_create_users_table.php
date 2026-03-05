@@ -28,6 +28,7 @@ return new class extends Migration {
             $table->string('place_of_birth')->nullable();
             $table->string('gender');
             $table->string('civil_status');
+            $table->string('contact_number')->nullable();
 
             $table->string('blood_type')->nullable();
             $table->string('occupation')->nullable();

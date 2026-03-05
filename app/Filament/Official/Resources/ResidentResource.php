@@ -19,7 +19,7 @@ class ResidentResource extends Resource
 
     protected static ?string $navigationGroup = 'Management';
 
-    protected static ?string $tenantRelationshipName = 'barangay';
+    protected static ?string $tenantRelationshipName = 'users';
 
     protected static ?string $tenantIdAttribute = 'barangay_id';
 
