@@ -107,12 +107,18 @@ class DocumentApprovalService
             'citySeal' => $municipalSealBase64,
             'official' => $official,
             'officials' => $officials,
+
+            // Pass as standalone variables instead
+            'province' => $municipality->province_name ?? 'Bataan',
+            'city' => $municipality->name ?? '',
+            'barangayAddress' => "Barangay Hall, {$barangay->name}",
+            'contactNumber' => 'N/A',
         ];
-        // Add helper properties to barangay object for the layout if they don't exist
-        $barangay->province = $municipality->province_name ?? 'Bataan';
-        $barangay->city = $municipality->name ?? '';
-        $barangay->address = "Barangay Hall, {$barangay->name}"; // Default
-        $barangay->contact_number = "N/A"; // Default
+        // // Add helper properties to barangay object for the layout if they don't exist
+        // $barangay->province = $municipality->province_name ?? 'Bataan';
+        // $barangay->city = $municipality->name ?? '';
+        // $barangay->address = "Barangay Hall, {$barangay->name}"; // Default
+        // $barangay->contact_number = "N/A"; // Default
 
         $html = view("livewire.documents.templates.{$slug}", $viewData)->render();
 

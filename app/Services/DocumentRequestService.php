@@ -78,9 +78,7 @@ class DocumentRequestService
             ->actions([
                 Action::make('view')
                     ->label('View Request')
-                    ->url(route('filament.resident.resources.document-transactions.index', [
-                        'tenant' => $transaction->barangay->barangay_code,
-                    ]))
+                    ->url(route('documents'))
                     ->markAsRead(),
             ])
             ->sendToDatabase($transaction->requester)
