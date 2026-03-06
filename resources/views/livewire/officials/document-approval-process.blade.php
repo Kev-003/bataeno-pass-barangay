@@ -128,6 +128,19 @@
                 </div>
                 @if($pendingTransactions && $pendingTransactions->status !== 'issued')
                     <div class="mt-12 flex justify-end gap-4 p-6 bg-slate-50 -m-8 mt-8 border-t">
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-medium text-gray-700">Signature Method:</span>
+                            <div class="flex rounded-lg overflow-hidden border border-gray-200">
+                                <button type="button" wire:click="$set('signatureMode', 'esign')"
+                                    class="px-4 py-2 text-sm font-medium transition {{ $signatureMode === 'esign' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">
+                                    E-Sign
+                                </button>
+                                <button type="button" wire:click="$set('signatureMode', 'ink')"
+                                    class="px-4 py-2 text-sm font-medium transition border-l border-gray-200 {{ $signatureMode === 'ink' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">
+                                    Ink Sign
+                                </button>
+                            </div>
+                        </div>
                         <button wire:click="approveAndSign" wire:loading.attr="disabled"
                             class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition active:scale-95 flex items-center gap-2">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

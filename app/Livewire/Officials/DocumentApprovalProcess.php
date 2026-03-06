@@ -17,6 +17,7 @@ class DocumentApprovalProcess extends Component
     public $hasValidId = false;
     public $barangay_code;
     public $transactionDetails = [];
+    public string $signatureMode = 'esign';
 
     public function mount($barangay_code, $id, DocumentApprovalService $service)
     {
@@ -38,7 +39,8 @@ class DocumentApprovalProcess extends Component
         try {
             $pdfPath = $service->generateAndSign(
                 $this->pendingTransactions,
-                BarangayTerm::where('user_id', auth()->id())->firstOrFail()
+                BarangayTerm::where('user_id', auth()->id())->firstOrFail(),
+                $this->signatureMode
             );
 
             session()->flash('success', 'Document signed and issued successfully!');

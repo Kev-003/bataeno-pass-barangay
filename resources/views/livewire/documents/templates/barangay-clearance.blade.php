@@ -79,7 +79,11 @@
             <div class="mt-12 flex justify-end">
                 <div class="text-center w-72">
                     <div class="relative mb-0">
-                        <x-documents.components.signature :image="$signature" />
+                        @if($signatureMode === 'esign' && $signature)
+                            <x-documents.components.signature :image="$signature" />
+                        @else
+                            <div></div>
+                        @endif
                         <div class="border-t border-black mt-2 pt-2 font-bold uppercase">
                             HON. {{ $official->name }}
                         </div>

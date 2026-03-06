@@ -103,38 +103,62 @@ class DocumentTransactionResource extends Resource
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->hidden(fn(DocumentTransaction $record) => $record->status === 'issued')
-                    ->requiresConfirmation()
-                    ->modalHeading('Approve Document')
-                    ->modalDescription('Please review the details below before issuing the document.')
-                    ->modalSubmitActionLabel('Confirm Approval & Issue')
-                    ->modalContent(fn(DocumentTransaction $record) => view('filament.official.resources.document-transaction-resource.approval-details', ['record' => $record]))
-                    ->action(function (DocumentTransaction $record) {
+                    ->requiresConfirmation(false)
+                    ->modalHeading('Approve & Issue Document')
+                    ->modalSubmitActionLabel('Confirm & Issue')
+                    ->modalWidth('md')
+                    ->modalIcon('heroicon-o-check-badge')
+                    ->modalIconColor('success')
+                    ->form(fn(DocumentTransaction $record) => [
+                        Forms\Components\View::make('filament.official.resources.document-transaction-resource.approval-details')
+                            ->viewData(['record' => $record]),
+
+                        Forms\Components\Radio::make('signature_mode')
+                            ->label('Signature Method')
+                            ->options([
+                                'esign' => 'E-Sign',
+                                'ink' => 'Ink Sign',
+                            ])
+                            ->default('esign')
+                            ->inline()
+                            ->inlineLabel(false)
+                            ->required(),
+                    ])
+                    ->action(function (DocumentTransaction $record, array $data) {
                         $official = auth()->user()->activeTerm;
-                        if (!$official) { /* Error handling... */
+
+                        if (!$official) {
+                            Notification::make()
+                                ->title('No Active Term')
+                                ->danger()
+                                ->body('You do not have an active barangay term.')
+                                ->send();
                             return;
                         }
 
                         try {
                             $service = app(\App\Services\DocumentApprovalService::class);
-                            $service->generateAndSign($record, $official);
+                            $service->generateAndSign($record, $official, $data['signature_mode']);
 
-                            // 1. Notify the Official (Toast only)
                             Notification::make()
                                 ->title('Document Issued')
                                 ->success()
                                 ->send();
 
-                            // 2. Notify the Resident (Real-time via Reverb + Database)
                             Notification::make()
                                 ->title('Document Ready')
                                 ->body("Your request for {$record->documentType->name} has been issued.")
                                 ->icon('heroicon-o-check-badge')
                                 ->color('success')
-                                ->sendToDatabase($record->requester) // Persistence
-                                ->broadcast($record->requester);      // Real-time via Reverb
-            
+                                ->sendToDatabase($record->requester)
+                                ->broadcast($record->requester);
+
                         } catch (\Exception $e) {
-                            // ... error handling
+                            Notification::make()
+                                ->title('Signing Failed')
+                                ->danger()
+                                ->body($e->getMessage())
+                                ->send();
                         }
                     }),
                 Tables\Actions\Action::make('reject')

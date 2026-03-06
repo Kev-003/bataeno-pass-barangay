@@ -9,6 +9,7 @@ use App\Notifications\DocumentRequestReceived;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use App\Models\DocumentTypeProperty;
+use Illuminate\Support\Facades\Storage;
 
 use Spatie\Browsershot\Browsershot;
 use App\Events\DocumentIssued;
@@ -54,7 +55,7 @@ class DocumentApprovalService
         return 'data:' . $mimeType . ';base64,' . base64_encode($fileData);
     }
 
-    public function generateAndSign(DocumentTransaction $transaction, BarangayTerm $official)
+    public function generateAndSign(DocumentTransaction $transaction, BarangayTerm $official, string $mode)
     {
         // Load Relationships — municipality() FK: barangays.municity_code -> municipalities.id
         $transaction->load(['barangay.municipality', 'documentType', 'requester']);
@@ -70,14 +71,16 @@ class DocumentApprovalService
         $signatureBase64 = null;
 
         // Use the exact filename generated during Profile upload.
-        $signaturePath = $official->user->digital_signature;
+        if ($mode === 'esign') {
+            $signaturePath = $official->user->digital_signature;
 
-        if ($signaturePath && \Illuminate\Support\Facades\Storage::disk('local')->exists($signaturePath)) {
-            $signatureBase64 = $this->getBase64Image($signaturePath);
-        }
+            if ($signaturePath && Storage::disk('local')->exists($signaturePath)) {
+                $signatureBase64 = $this->getBase64Image($signaturePath);
+            }
 
-        if (!$signatureBase64) {
-            throw new \Exception("Official signature not configured or file missing for ID: {$official->user_id}. Go to Profile to set it up.");
+            if (!$signatureBase64) {
+                throw new \Exception("Official signature not configured. Go to Profile to set it up.");
+            }
         }
 
         $slug = str($transaction->documentType->name)->slug();
@@ -108,23 +111,19 @@ class DocumentApprovalService
             'official' => $official,
             'officials' => $officials,
 
-            // Pass as standalone variables instead
+            // Pass helper properties as standalone variables instead
             'province' => $municipality->province_name ?? 'Bataan',
             'city' => $municipality->name ?? '',
             'barangayAddress' => "Barangay Hall, {$barangay->name}",
             'contactNumber' => 'N/A',
+            'signatureMode' => $mode,
         ];
-        // // Add helper properties to barangay object for the layout if they don't exist
-        // $barangay->province = $municipality->province_name ?? 'Bataan';
-        // $barangay->city = $municipality->name ?? '';
-        // $barangay->address = "Barangay Hall, {$barangay->name}"; // Default
-        // $barangay->contact_number = "N/A"; // Default
 
         $html = view("livewire.documents.templates.{$slug}", $viewData)->render();
 
         $docSlug = str($transaction->documentType->name)->slug();
         $fileName = "{$transaction->requester->id}/{$transaction->barangay->barangay_code}/{$docSlug}/{$transaction->id}_signed.pdf";
-        $fullPath = \Illuminate\Support\Facades\Storage::disk('documents')->path($fileName);
+        $fullPath = Storage::disk('documents')->path($fileName);
 
         $directory = dirname($fullPath);
         if (!is_dir($directory)) {
