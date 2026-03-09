@@ -37,10 +37,7 @@ class ProcessDocumentApproval implements ShouldQueue
             $this->signatureMode
         );
 
-        // 2. Broadcast to resident via Reverb
-        DocumentIssued::dispatch($this->transaction->fresh());
-
-        // 3. Notify resident
+        // 2. Notify resident
         Notification::make()
             ->title('Document Ready')
             ->body(
