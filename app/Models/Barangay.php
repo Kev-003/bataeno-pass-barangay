@@ -29,27 +29,19 @@ class Barangay extends Model
         return $this->belongsTo(Municipality::class, 'municity_code', 'id');
     }
 
-    /**
-     * Alternative lookup via matching string PSGC codes (if both tables have matching code strings).
-     */
-    public function municipalityByCode()
-    {
-        return $this->belongsTo(Municipality::class, 'municity_code', 'municity_code');
-    }
-
     public function users()
     {
         return $this->hasMany(User::class, 'barangay_id');
     }
 
-    public function getProvinceAttribute()
+    public function getProvinceAttribute(): string
     {
-        return $this->municipalityByCode->province_name ?? 'Bataan';
+        return $this->municipality->province_name ?? 'Bataan';
     }
 
-    public function getCityAttribute()
+    public function getCityAttribute(): string
     {
-        return $this->municipalityByCode->name ?? '';
+        return $this->municipality->name ?? '';
     }
 
     public function getAddressAttribute()
@@ -65,6 +57,16 @@ class Barangay extends Model
     public function families()
     {
         return $this->hasMany(Family::class, 'barangay_id');
+    }
+
+    public function houses()
+    {
+        return $this->hasMany(House::class, 'barangay_id');
+    }
+
+    public function getAllHouseholdsCountAttribute(): int
+    {
+        return $this->houses()->withCount('households')->get()->sum('households_count');
     }
 
     public function delegations()

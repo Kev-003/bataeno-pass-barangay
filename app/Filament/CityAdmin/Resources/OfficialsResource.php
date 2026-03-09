@@ -4,12 +4,16 @@ namespace App\Filament\CityAdmin\Resources;
 
 use App\Filament\CityAdmin\Resources\OfficialsResource\Pages;
 use App\Models\BarangayTerm;
+use App\Models\Municipality;
+use App\Models\Barangay;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\BarangayRole;
+use App\Filament\Filters\BarangayFilter;
 
 class OfficialsResource extends Resource
 {
@@ -23,10 +27,11 @@ class OfficialsResource extends Resource
     {
         $tenant = filament()->getTenant();
 
-        $barangayIds = \App\Models\Barangay::where('municity_code', $tenant->id)
+        $barangayIds = Barangay::where('municity_code', $tenant->id)
             ->pluck('id');
 
         return parent::getEloquentQuery()
+            ->with(['user', 'barangay.municipality', 'position'])
             ->whereIn('barangay_id', $barangayIds);
     }
 
@@ -39,12 +44,24 @@ class OfficialsResource extends Resource
                     ->getOptionLabelFromRecordUsing(fn($record) => "{$record->first_name} {$record->last_name}")
                     ->searchable(['first_name', 'last_name'])
                     ->required(),
+
+
                 Forms\Components\Select::make('barangay_id')
-                    ->relationship('barangay', 'name')
+                    ->relationship(
+                        'barangay',
+                        'name',
+                        modifyQueryUsing: fn(Builder $query, $get) =>
+                        $query->when(
+                            $get('municity_id'),
+                            fn($q, $municityId) => $q->where('municity_code', $municityId)
+                        )
+                    )
+                    ->searchable()
                     ->required(),
                 Forms\Components\Select::make('position_id')
-                    ->relationship('position', 'name')
-                    ->required(),
+                    ->relationship('position', 'name', fn($query) => $query->whereIn('name', BarangayRole::officialPositions()))
+                    ->required()
+
             ]);
     }
 
@@ -56,9 +73,7 @@ class OfficialsResource extends Resource
                     ->label('Official')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('barangay.name')
-                    ->label('Barangay')
-                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('position.name')
                     ->label('Position')
                     ->badge()
@@ -70,6 +85,11 @@ class OfficialsResource extends Resource
                     })
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('barangay.name')
+                    ->label('Barangay')
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Since')
                     ->date('M d, Y')
@@ -94,15 +114,7 @@ class OfficialsResource extends Resource
                         $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
                     }))
                     ->default(),
-
-                Tables\Filters\SelectFilter::make('barangay_id')
-                    ->label('Barangay')
-                    ->searchable()
-                    ->options(function () {
-                        $tenant = filament()->getTenant();
-                        return \App\Models\Barangay::where('municity_code', $tenant->id)
-                            ->pluck('name', 'id');
-                    }),
+                BarangayFilter::make(),
 
                 Tables\Filters\SelectFilter::make('position_id')
                     ->label('Position')

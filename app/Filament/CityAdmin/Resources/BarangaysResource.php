@@ -52,6 +52,13 @@ class BarangaysResource extends Resource
                     ->label('Resident Count')
                     ->counts('users')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('families_count')
+                    ->label('Family Count')
+                    ->counts('families')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('all_households_count')
+                    ->label('Household Count')
+                    ->sortable(),
             ])
             ->filters([
                 //
