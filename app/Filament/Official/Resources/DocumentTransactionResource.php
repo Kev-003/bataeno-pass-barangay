@@ -89,12 +89,6 @@ class DocumentTransactionResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('download')
-                    ->label('Download')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('info')
-                    ->hidden(fn(DocumentTransaction $record) => $record->status !== 'issued')
-                    ->url(fn(DocumentTransaction $record) => $record->getTemporaryDownloadUrl(), shouldOpenInNewTab: true),
                 Tables\Actions\ViewAction::make()
                     ->hidden(fn(DocumentTransaction $record) => $record->status === 'pending')
                     ->modalContent(fn(DocumentTransaction $record) => view('filament.official.resources.document-transaction-resource.approval-details', ['record' => $record])),
@@ -125,41 +119,22 @@ class DocumentTransactionResource extends Resource
                             ->required(),
                     ])
                     ->action(function (DocumentTransaction $record, array $data) {
-                        $official = auth()->user()->activeTerm;
+                        $official = auth()->user()->activeTerm()->first();
 
-                        if (!$official) {
-                            Notification::make()
-                                ->title('No Active Term')
-                                ->danger()
-                                ->body('You do not have an active barangay term.')
-                                ->send();
-                            return;
-                        }
+                        // Optimistically update status so UI reflects processing state
+                        $record->update(['status' => 'processing']);
 
-                        try {
-                            $service = app(\App\Services\DocumentApprovalService::class);
-                            $service->generateAndSign($record, $official, $data['signature_mode']);
+                        \App\Jobs\ProcessDocumentApproval::dispatch(
+                            $record,
+                            $official,
+                            $data['signature_mode'] ?? 'esign'
+                        );
 
-                            Notification::make()
-                                ->title('Document Issued')
-                                ->success()
-                                ->send();
-
-                            Notification::make()
-                                ->title('Document Ready')
-                                ->body("Your request for {$record->documentType->name} has been issued.")
-                                ->icon('heroicon-o-check-badge')
-                                ->color('success')
-                                ->sendToDatabase($record->requester)
-                                ->broadcast($record->requester);
-
-                        } catch (\Exception $e) {
-                            Notification::make()
-                                ->title('Signing Failed')
-                                ->danger()
-                                ->body($e->getMessage())
-                                ->send();
-                        }
+                        Notification::make()
+                            ->title('Document is being processed')
+                            ->body('The document will be ready shortly.')
+                            ->info()
+                            ->send();
                     }),
                 Tables\Actions\Action::make('reject')
                     ->label('Reject')

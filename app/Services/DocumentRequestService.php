@@ -15,7 +15,6 @@ class DocumentRequestService
     public function createRequest(User $user, string $docTypeId, string $modelClass, string $purpose, array $dynamicFields)
     {
         return DB::transaction(function () use ($user, $docTypeId, $modelClass, $purpose, $dynamicFields) {
-
             $transaction = DocumentTransaction::create([
                 'requester_id' => $user->id,
                 'barangay_id' => $user->barangay_id,
@@ -29,7 +28,9 @@ class DocumentRequestService
                 'transaction_id' => $transaction->id,
             ]));
 
-            $this->notifyOfficials($transaction);
+            // Dispatch job instead of running synchronously
+            \App\Jobs\ProcessDocumentRequest::dispatch($transaction)
+                ->afterCommit(); // waits for DB transaction to commit first
 
             return $transaction;
         });

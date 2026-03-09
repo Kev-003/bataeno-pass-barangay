@@ -167,8 +167,16 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
     {
         if ($this->hasRole('Super Admin')) {
             return match ($panel->getId()) {
-                'official' => Barangay::all(),
-                'city' => Municipality::all(),
+                'official' => \Illuminate\Support\Facades\Cache::remember(
+                    'all_barangays',
+                    now()->addMinutes(30),
+                    fn() => Barangay::all()
+                ),
+                'city' => \Illuminate\Support\Facades\Cache::remember(
+                    'all_municipalities',
+                    now()->addMinutes(30),
+                    fn() => Municipality::all()
+                ),
                 default => Barangay::all(),
             };
         }
@@ -246,8 +254,13 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
 
     // ── Barangay Helpers ──────────────────────────────────────────────────────
 
+    private ?array $cachedBarangayIds = null;
     public function getActiveBarangayIds(): array
     {
+        if ($this->cachedBarangayIds !== null) {
+            return $this->cachedBarangayIds;
+        }
+
         $householdBarangayIds = $this->householdMemberProfiles()
             ->where('presence_status', 'Present')
             ->with('household.house')
@@ -269,13 +282,15 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
             ->map(fn($d) => $d->granterTerm?->barangay_id)
             ->filter();
 
-        return collect([$termId, $residentId])
+        $this->cachedBarangayIds = collect([$termId, $residentId])
             ->concat($householdBarangayIds)
             ->concat($delegatedIds)
             ->filter()
             ->unique()
             ->values()
             ->toArray();
+
+        return $this->cachedBarangayIds;
     }
 
     public function getActiveBarangayId(): ?int
