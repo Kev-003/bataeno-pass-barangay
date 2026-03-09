@@ -79,11 +79,21 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <a href="{{ \App\Filament\Official\Resources\ResidentResource::getUrl('edit', ['record' => $user]) }}"
-                                        class="p-2 text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-all"
-                                        title="View Profile">
-                                        <x-heroicon-m-arrow-right-circle class="w-6 h-6" />
-                                    </a>
+                                    @php
+    $panelId = filament()->getCurrentPanel()->getId();
+    $editUrl = $panelId === 'city'
+        ? null
+        : \App\Filament\Official\Resources\ResidentResource::getUrl('edit', ['record' => $user]);
+@endphp
+
+@if($editUrl)
+    <a href="{{ $editUrl }}"
+        class="p-2 text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-all"
+        title="View Profile">
+        <x-heroicon-m-arrow-right-circle class="w-6 h-6" />
+    </a>
+
+@endif
                                 </div>
                             @endif
                         @endforeach

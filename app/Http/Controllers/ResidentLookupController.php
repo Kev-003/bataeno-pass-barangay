@@ -177,7 +177,7 @@ class ResidentLookupController extends Controller
 
     protected function getBataenoBaseUrl()
     {
-        return env('BATAENO_PASS_BASE_URL') ?: config('services.bataeno.base_url');
+        return env('BATAENO_PASS_API_URL') ?: config('services.bataeno.base_url');
     }
 
     protected function getBataenoClientId()

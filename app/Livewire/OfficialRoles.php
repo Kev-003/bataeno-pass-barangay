@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\BarangayRole;
 use Livewire\Component;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -10,7 +11,6 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-use Spatie\Permission\Models\Role;
 
 class OfficialRoles extends Component implements HasTable, HasForms
 {
@@ -26,7 +26,7 @@ class OfficialRoles extends Component implements HasTable, HasForms
     {
         return $table
             ->query(
-                Role::query()->whereIn('name', ['Captain', 'Secretary', 'Treasurer', 'Kagawad'])
+                Role::query()->whereIn('name', BarangayRole::officialPositions())
             )
             ->columns([
                 TextColumn::make('name')

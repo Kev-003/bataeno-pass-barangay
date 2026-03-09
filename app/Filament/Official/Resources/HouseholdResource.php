@@ -65,20 +65,24 @@ class HouseholdResource extends Resource
     {
         return $infolist
             ->schema([
-                \Filament\Infolists\Components\Section::make('House Details')
-                    ->icon('heroicon-o-home')
+                // Left column — static info
+                \Filament\Infolists\Components\Group::make()
+                    ->columnSpan(1)
                     ->schema([
-                        \Filament\Infolists\Components\TextEntry::make('house.address')
-                            ->label('Full Address')
-                            ->state(fn($record) => ($record->house->housing_unit ? "{$record->house->housing_unit}, " : "") . $record->house->street . ($record->house->subdivision ? ", {$record->house->subdivision}" : "")),
-                        \Filament\Infolists\Components\TextEntry::make('house.street')
-                            ->label('Street Name'),
-                    ])->columns(2),
+                        \Filament\Infolists\Components\Section::make('House Details')
+                            ->icon('heroicon-o-home')
+                            ->compact()
+                            ->schema([
+                                \Filament\Infolists\Components\TextEntry::make('house.address')
+                                    ->label('Full Address')
+                                    ->state(fn($record) => ($record->house->housing_unit ? "{$record->house->housing_unit}, " : "") . $record->house->street . ($record->house->subdivision ? ", {$record->house->subdivision}" : "")),
+                                \Filament\Infolists\Components\TextEntry::make('house.street')
+                                    ->label('Street Name'),
+                            ]),
 
-                \Filament\Infolists\Components\Section::make('Household Management')
-                    ->icon('heroicon-o-user-group')
-                    ->schema([
-                        \Filament\Infolists\Components\Grid::make(2)
+                        \Filament\Infolists\Components\Section::make('Household Management')
+                            ->icon('heroicon-o-user-group')
+                            ->compact()
                             ->schema([
                                 \Filament\Infolists\Components\TextEntry::make('headOfHousehold.user.name')
                                     ->label('Head of Household')
@@ -88,11 +92,37 @@ class HouseholdResource extends Resource
                                 \Filament\Infolists\Components\TextEntry::make('ownership')
                                     ->badge()
                                     ->color('info'),
-                            ]),
-                        \Filament\Infolists\Components\RepeatableEntry::make('members')
-                            ->label('Other Members')
+                            ])->columns(2),
+
+                        \Filament\Infolists\Components\Section::make('Financial Information')
+                            ->icon('heroicon-o-banknotes')
+                            ->compact()
                             ->schema([
-                                \Filament\Infolists\Components\Grid::make(3)
+                                \Filament\Infolists\Components\TextEntry::make('monthly_utility_expense')
+                                    ->money('PHP'),
+                                \Filament\Infolists\Components\TextEntry::make('total_income')
+                                    ->money('PHP'),
+                                \Filament\Infolists\Components\TextEntry::make('expires_at')
+                                    ->dateTime()
+                                    ->placeholder('Never'),
+                            ])->columns(3),
+                    ]),
+
+                // Right column — members list
+                \Filament\Infolists\Components\Section::make('Members')
+                    ->icon('heroicon-o-users')
+                    ->compact()
+                    ->columnSpan(1)
+                    ->schema([
+                        \Filament\Infolists\Components\RepeatableEntry::make('members')
+                            ->label('')
+                            ->schema([
+                                \Filament\Infolists\Components\Grid::make([
+                                    'default' => 2,  // forces 2 columns even on mobile
+                                    'sm' => 2,
+                                    'md' => 2,
+                                    'lg' => 2,
+                                ])
                                     ->schema([
                                         \Filament\Infolists\Components\TextEntry::make('user.name')
                                             ->label('')
@@ -106,25 +136,11 @@ class HouseholdResource extends Resource
                                             ->placeholder('Member'),
                                     ])
                             ])
-                            ->contained(false) // Keeps it "thin" and avoids double borders
-                            ->state(function (Household $record) {
-                                return $record->members->where('id', '!=', $record->household_head_id);
-                            })
-                            ->placeholder('No other members registered')
+                            ->contained(false)
+                            ->placeholder('No members registered'),
                     ]),
-
-                \Filament\Infolists\Components\Section::make('Financial Information')
-                    ->icon('heroicon-o-banknotes')
-                    ->schema([
-                        \Filament\Infolists\Components\TextEntry::make('monthly_utility_expense')
-                            ->money('PHP'),
-                        \Filament\Infolists\Components\TextEntry::make('total_income')
-                            ->money('PHP'),
-                        \Filament\Infolists\Components\TextEntry::make('expires_at')
-                            ->dateTime()
-                            ->placeholder('Never'),
-                    ])->columns(3),
-            ]);
+            ])
+            ->columns(2);
     }
 
     public static function table(Table $table): Table
@@ -135,6 +151,11 @@ class HouseholdResource extends Resource
                     ->label('Address')
                     ->state(fn($record) => ($record->house->housing_unit ? "{$record->house->housing_unit}, " : "") . $record->house->street)
                     ->searchable(['housing_unit', 'street'])
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('barangay.name')
+                    ->label('Barangay')
+                    ->placeholder('—')
+                    ->visible(fn() => filament()->getCurrentPanel()?->getId() === 'city')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('headOfHousehold.user.name')
                     ->label('Head of Household')

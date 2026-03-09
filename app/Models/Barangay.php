@@ -78,4 +78,13 @@ class Barangay extends Model
             'id'                // Local key on BarangayTerm table
         );
     }
+
+    public function activeCaptain()
+    {
+        return $this->hasOne(\App\Models\BarangayTerm::class, 'barangay_id')
+            ->whereHas('position', fn($q) => $q->where('name', 'Captain'))
+            ->where(function ($q) {
+                $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
+            });
+    }
 }

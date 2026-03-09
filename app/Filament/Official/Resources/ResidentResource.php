@@ -184,6 +184,12 @@ class ResidentResource extends Resource
                         default => 'gray',
                     }),
 
+                Tables\Columns\TextColumn::make('barangay.name')
+                    ->label('Barangay')
+                    ->placeholder('—')
+                    ->visible(fn() => filament()->getCurrentPanel()?->getId() === 'city')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -201,6 +207,7 @@ class ResidentResource extends Resource
                         'Male' => 'Male',
                         'Female' => 'Female',
                     ]),
+
             ])
             ->actions([
                 Tables\Actions\Action::make('view_tree')

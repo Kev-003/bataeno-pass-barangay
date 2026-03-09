@@ -123,9 +123,7 @@ Route::get('documents/temp/{path}', function (Request $request, string $path) {
     $user = auth()->user();
     $isOwner = (int) $user->id === (int) $transaction->requester_id;
 
-    $isOfficial = $user->isOfficial() && ($user->isAdmin() || in_array($transaction->barangay_id, $user->getActiveBarangayIds()));
-
-    if (!$isOwner && !$isOfficial) {
+    if (!$isOwner) {
         abort(403, 'Unauthorized: You do not have permission to download this file.');
     }
 

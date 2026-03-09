@@ -21,24 +21,6 @@ class OfficialResource extends Resource
 
     protected static ?string $label = 'Barangay Official';
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'email')
-                    ->searchable()
-                    ->required(),
-                Forms\Components\Select::make('position_id')
-                    ->relationship('position', 'name')
-                    ->required(),
-                Forms\Components\DatePicker::make('started_at')
-                    ->default(now())
-                    ->required(),
-                Forms\Components\DatePicker::make('ended_at'),
-            ]);
-    }
-
     public static function table(Table $table): Table
     {
         return $table
@@ -81,7 +63,6 @@ class OfficialResource extends Resource
     {
         return [
             'index' => Pages\ListOfficials::route('/'),
-            'create' => Pages\CreateOfficial::route('/create'),
             'edit' => Pages\EditOfficial::route('/{record}/edit'),
         ];
     }

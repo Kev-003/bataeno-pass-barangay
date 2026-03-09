@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use App\Models\BarangayRole;
 
 class EnsureUserBelongsToBarangay
 {
@@ -29,11 +30,11 @@ class EnsureUserBelongsToBarangay
         }
 
         // 3. Admins bypass restriction
-        if ($user->isAdmin()) {
+        if ($user->hasRole('Admin')) {
             return $next($request);
         }
 
-        if (!$user->isOfficial()) {
+        if (!$user->hasAnyRole(BarangayRole::officialRoles())) {
             abort(403, 'Access denied. You do not have official privileges.');
         }
 
@@ -44,6 +45,7 @@ class EnsureUserBelongsToBarangay
         if (!$targetBarangayCode) {
             return $next($request);
         }
+
 
         // 6. Check permissions
         if (!in_array($targetBarangayCode, $user->getActiveBarangayCodes())) {

@@ -173,7 +173,7 @@ class HouseholdProfiles extends Component
     public function render()
     {
         $profiles = HouseholdMemberProfile::where('user_id', Auth::id())
-            ->with(['household.house.linkedBarangay'])
+            ->with(['household.house.barangay'])
             ->get()
             ->sortByDesc(fn($p) => $p->presence_status === 'Present');
 

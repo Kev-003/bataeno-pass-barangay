@@ -35,7 +35,7 @@ return [
         'client_id' => env('BATAENO_PASS_CLIENT_ID'),
         'client_secret' => env('BATAENO_PASS_CLIENT_SECRET'),
         'redirect' => env('BATAENO_REDIRECT_URI'),
-        'base_url' => 'https://bataeno-pass.bataan.gov.ph',
+        'base_url' => env('BATAENO_PASS_API_URL'),
     ],
 
 ];

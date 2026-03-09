@@ -18,7 +18,7 @@
         <div class="flex-1 text-center md:text-left">
             <div class="flex flex-col md:flex-row md:items-center gap-3 mb-2">
                 <h2 class="text-4xl font-bold tracking-tight">{{ $user->name }}</h2>
-                @if($user->isOfficial())
+                @if($user->hasAnyRole(App\Models\BarangayRole::officialRoles()))
                     <div
                         class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 backdrop-blur-md rounded-full border border-blue-400/30 text-blue-200 text-sm font-semibold">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

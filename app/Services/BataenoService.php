@@ -18,7 +18,7 @@ class BataenoService
     public function __construct()
     {
         $this->baseUrl = rtrim(
-            config('services.bataeno.base_url', env('BATAENO_PASS_BASE_URL', 'https://bataeno-pass.bataan.gov.ph')),
+            config('services.bataeno.base_url', env('BATAENO_PASS_API_URL', 'https://bataeno-pass.bataan.gov.ph')),
             '/'
         );
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barangay;
+use App\Models\BarangayRole;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Services\BataenoService;
@@ -113,11 +114,11 @@ class BataenoAuthController extends Controller
         $user->save();
         Auth::login($user);
 
-        if ($user->isAdmin()) {
+        if ($user->hasRole('Admin')) {
             return redirect('/admin');
         }
 
-        if ($user->isOfficial()) {
+        if ($user->hasAnyRole(BarangayRole::officialRoles())) {
             return redirect('/official/' . $user->barangay?->barangay_code);
         }
 

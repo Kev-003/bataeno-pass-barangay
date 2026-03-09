@@ -48,6 +48,11 @@ class HouseResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('subdivision')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('barangay.name')
+                    ->label('Barangay')
+                    ->placeholder('—')
+                    ->visible(fn() => filament()->getCurrentPanel()?->getId() === 'city')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

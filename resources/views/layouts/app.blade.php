@@ -22,7 +22,7 @@
         window.AppConfig = {
             userId: {{ auth()->id() ?? 'null' }},
             barangayId: '{!! auth()->user()?->getActiveBarangayCode() ?? '' !!}',
-            isOfficial: {{ auth()->check() && auth()->user()->isOfficial() ? 'true' : 'false' }}
+            isOfficial: {{ auth()->check() && auth()->user()->hasAnyRole(App\Models\BarangayRole::officialRoles()) ? 'true' : 'false' }}
         };
     </script>
 </head>

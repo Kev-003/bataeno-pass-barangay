@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Filters\BarangayFilter;
 
 class FamilyResource extends Resource
 {
@@ -73,13 +74,19 @@ class FamilyResource extends Resource
                     ->label('Subdivision')
                     ->placeholder('—'),
 
+                Tables\Columns\TextColumn::make('barangay.name')
+                    ->label('Barangay')
+                    ->placeholder('—')
+                    ->visible(fn() => filament()->getCurrentPanel()?->getId() === 'city')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                BarangayFilter::make(),
             ])
             ->actions([
                 Tables\Actions\Action::make('view_members')
