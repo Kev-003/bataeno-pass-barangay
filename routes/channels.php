@@ -16,15 +16,18 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 // Officials listen here for new document requests submitted to their barangay.
 // Any official whose active barangay term matches the barangay_id can listen.
 Broadcast::channel('barangay.{barangayCode}.requests', function ($user, $barangayCode) {
-    // Allow if the user is an official of this barangay (has an active BarangayTerm)
-    return $user->barangayTerms()
-        ->whereHas('barangay', function ($query) use ($barangayCode) {
-            $query->where('barangay_code', $barangayCode);
-        })
-        ->where(function ($q) {
-            $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
-        })
-        ->exists();
+    return \Illuminate\Support\Facades\Cache::remember(
+        "channel_auth_{$user->id}_{$barangayCode}",
+        now()->addMinutes(15),
+        fn() => $user->barangayTerms()
+            ->whereHas('barangay', function ($query) use ($barangayCode) {
+                $query->where('barangay_code', $barangayCode);
+            })
+            ->where(function ($q) {
+                $q->whereNull('ended_at')->orWhere('ended_at', '>=', now());
+            })
+            ->exists()
+    );
 });
 
 // Residents listen here to be notified when their document is issued.
