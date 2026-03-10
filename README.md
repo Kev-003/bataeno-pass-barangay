@@ -598,6 +598,714 @@ The central record for every document request. Tracks `requester_id`, `approver_
 
 Junction table linking users to households. Key fields include `role` (head, spouse, member), `membership_type` (primary_resident, transient, associate), and `presence_status` (present, out of town). The combination of `role = 'Head'` and `end_date IS NULL` is enforced as unique per household.
 
+## Table Index
+
+| Table Name                        | Group                        | Columns | Model                          |
+| --------------------------------- | ---------------------------- | ------- | ------------------------------ |
+| municipalities                    | Core Location                | 7       | Municipality                   |
+| barangays                         | Core Location                | 8       | Barangay                       |
+| users                             | Users & Authentication       | 29      | User                           |
+| password_reset_tokens             | Users & Authentication       | 3       | (Laravel built-in)             |
+| personal_access_tokens            | Users & Authentication       | 10      | (Laravel Sanctum)              |
+| permissions                       | Roles & Permissions (Spatie) | 5       | BarangayRole / Spatie          |
+| roles                             | Roles & Permissions (Spatie) | 5       | BarangayRole / Spatie          |
+| model_has_roles                   | Roles & Permissions (Spatie) | 3       | (Spatie pivot)                 |
+| model_has_permissions             | Roles & Permissions (Spatie) | 3       | (Spatie pivot)                 |
+| role_has_permissions              | Roles & Permissions (Spatie) | 2       | (Spatie pivot)                 |
+| barangay_terms                    | Barangay Governance          | 8       | BarangayTerm                   |
+| delegations                       | Barangay Governance          | 6       | Delegation                     |
+| houses                            | Housing & Households         | 7       | House                          |
+| households                        | Housing & Households         | 9       | Household                      |
+| household_member_profiles         | Housing & Households         | 12      | HouseholdMemberProfile         |
+| families                          | Housing & Households         | 8       | Family                         |
+| residency_requests                | Housing & Households         | 16      | ResidencyRequest               |
+| document_type_properties          | Document System              | 9       | DocumentTypeProperty           |
+| document_requirements_definitions | Document System              | 6       | DocumentRequirementsDefinition |
+| document_rules                    | Document System              | 5       | (Pivot)                        |
+| document_transactions             | Document System              | 18      | DocumentTransaction            |
+| transaction_requirements          | Document System              | 8       | TransactionRequirement         |
+| clearances                        | Document Detail Tables       | 5       | Clearance                      |
+| business_clearances               | Document Detail Tables       | 9       | BusinessClearance              |
+| construction_clearances           | Document Detail Tables       | 5       | ConstructionClearance          |
+| tricycle_clearances               | Document Detail Tables       | 8       | TricycleClearance              |
+| jobseeker_certificates            | Document Detail Tables       | 4       | JobseekerCertificate           |
+| guardianship_certificates         | Document Detail Tables       | 7       | GuardianshipCertificate        |
+| indigency_certificates            | Document Detail Tables       | 6       | IndigencyCertificate           |
+| indigencysps_certificates         | Document Detail Tables       | 7       | IndigencySPSCertificate        |
+| residency_certificates            | Document Detail Tables       | 6       | ResidencyCertificate           |
+| solo_parent_certificates          | Document Detail Tables       | 7       | SoloParentCertificate          |
+| notifications                     | System & Infrastructure      | 8       | (Laravel built-in)             |
+| jobs                              | System & Infrastructure      | 7       | (Laravel Queue)                |
+| failed_jobs                       | System & Infrastructure      | 7       | (Laravel Queue)                |
+| telescope_entries                 | System & Infrastructure      | 8       | (Laravel Telescope)            |
+| telescope_entries_tags            | System & Infrastructure      | 2       | (Laravel Telescope)            |
+| telescope_monitoring              | System & Infrastructure      | 1       | (Laravel Telescope)            |
+
+---
+
+### Core Location
+
+#### municipalities
+
+**Model:** Municipality
+**Description:** Stores municipality/city records within Bataan province. Serves as the top-level geographic unit linking barangays to their respective city or municipality.
+
+| #   | Column Name   | Data Type    | Nullable | Foreign Key | Description                                                                                                                                                                     |
+| --- | ------------- | ------------ | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | id            | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                                                                                                                                  |
+| 2   | municity_code | VARCHAR(20)  | YES      | —           | eGovPH standard code uniquely identifying the municipality. Used as the primary linking identifier with Bataeno Pass data. Indexed for fast lookups on barangays.municity_code. |
+| 3   | name          | VARCHAR(255) | NO       | —           | Full name of the municipality or city. Must be unique.                                                                                                                          |
+| 4   | district      | INT          | NO       | —           | Legislative district number the municipality belongs to.                                                                                                                        |
+| 5   | zip_code      | VARCHAR(4)   | NO       | —           | 4-digit Philippine postal ZIP code.                                                                                                                                             |
+| 6   | created_at    | TIMESTAMP    | YES      | —           | Record creation timestamp.                                                                                                                                                      |
+| 7   | updated_at    | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                                                                                                                                  |
+
+---
+
+#### barangays
+
+**Model:** Barangay
+**Description:** Stores barangay records. Each barangay belongs to a municipality and serves as the primary jurisdictional unit for residents, households, officials, and document transactions.
+
+| #   | Column Name   | Data Type    | Nullable | Foreign Key       | Description                                                                                                                                  |
+| --- | ------------- | ------------ | -------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | id            | BIGINT (PK)  | NO       | —                 | Auto-incrementing primary key.                                                                                                               |
+| 2   | barangay_code | VARCHAR(20)  | YES      | —                 | eGovPH standard barangay code. Unique identifier used for Bataeno Pass integration. Indexed on barangays.barangay_code.                      |
+| 3   | municity_code | VARCHAR(20)  | YES      | municipalities.id | Stores the local integer FK referencing municipalities.id. Path: barangays.municity_code → municipalities.id → municipalities.municity_code. |
+| 4   | province_code | VARCHAR(20)  | YES      | —                 | eGovPH province code for the province this barangay belongs to.                                                                              |
+| 5   | region_code   | VARCHAR(20)  | YES      | —                 | eGovPH region code (e.g., Region III – Central Luzon).                                                                                       |
+| 6   | name          | VARCHAR(255) | NO       | —                 | Full name of the barangay.                                                                                                                   |
+| 7   | created_at    | TIMESTAMP    | YES      | —                 | Record creation timestamp.                                                                                                                   |
+| 8   | updated_at    | TIMESTAMP    | YES      | —                 | Record last-updated timestamp.                                                                                                               |
+
+---
+
+### Users & Authentication
+
+#### users
+
+**Model:** User
+**Description:** Central resident/user record. Represents both ordinary residents and barangay officials. Supports soft deletes. Implements Filament multi-tenancy through barangay and municipality associations.
+
+| #   | Column Name       | Data Type    | Nullable | Foreign Key       | Description                                                                                                            |
+| --- | ----------------- | ------------ | -------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | id                | BIGINT (PK)  | NO       | —                 | Auto-incrementing primary key.                                                                                         |
+| 2   | uuid              | VARCHAR(255) | NO       | —                 | Universally unique identifier for external/API references. Must be unique.                                             |
+| 3   | family_id         | BIGINT (FK)  | YES      | families.id       | References the family unit this user belongs to (families.id). Nullable; set to NULL on family deletion.               |
+| 4   | first_name        | VARCHAR(255) | NO       | —                 | User's first name.                                                                                                     |
+| 5   | middle_name       | VARCHAR(255) | YES      | —                 | User's middle name.                                                                                                    |
+| 6   | last_name         | VARCHAR(255) | NO       | —                 | User's last name.                                                                                                      |
+| 7   | suffix            | VARCHAR(255) | YES      | —                 | Name suffix (e.g., Jr., III).                                                                                          |
+| 8   | mother_id         | VARCHAR(255) | YES      | users.id          | Self-referencing FK to the mother's user record (users.id). Stored as string; set to NULL on parent deletion.          |
+| 9   | father_id         | VARCHAR(255) | YES      | users.id          | Self-referencing FK to the father's user record (users.id). Stored as string; set to NULL on parent deletion.          |
+| 10  | date_of_birth     | DATE         | NO       | —                 | User's date of birth.                                                                                                  |
+| 11  | place_of_birth    | VARCHAR(255) | YES      | —                 | City or municipality where the user was born.                                                                          |
+| 12  | gender            | VARCHAR(255) | NO       | —                 | User's gender (e.g., Male, Female).                                                                                    |
+| 13  | civil_status      | VARCHAR(255) | NO       | —                 | Civil status (e.g., Single, Married, Widowed).                                                                         |
+| 14  | contact_number    | VARCHAR(255) | YES      | —                 | User's mobile or telephone number.                                                                                     |
+| 15  | blood_type        | VARCHAR(255) | YES      | —                 | Blood type (e.g., O+, A-, B+).                                                                                         |
+| 16  | occupation        | VARCHAR(255) | YES      | —                 | User's current occupation or profession.                                                                               |
+| 17  | registered_at     | TIMESTAMP    | NO       | —                 | Date the user was registered in the system. Defaults to current timestamp.                                             |
+| 18  | municity_id       | BIGINT (FK)  | YES      | municipalities.id | FK to municipalities.id. Indicates the municipality the user is associated with. Set to NULL on municipality deletion. |
+| 19  | barangay_id       | BIGINT (FK)  | YES      | barangays.id      | FK to barangays.id. The barangay where the user resides. Set to NULL on barangay deletion.                             |
+| 20  | email             | VARCHAR(255) | NO       | —                 | Unique email address used for login and notifications.                                                                 |
+| 21  | email_verified_at | TIMESTAMP    | YES      | —                 | Timestamp when the email was verified. NULL if unverified.                                                             |
+| 22  | password          | VARCHAR(255) | NO       | —                 | Bcrypt-hashed password.                                                                                                |
+| 23  | egov_data         | JSON         | YES      | —                 | Raw eGovPH data payload (e.g., IDs, passport, UMID, PhilHealth).                                                       |
+| 24  | profile_photos    | TEXT         | YES      | —                 | Path or URL to the profile photo. May be a full URL (Bataeno portal) or a storage-relative path.                       |
+| 25  | digital_signature | TEXT         | YES      | —                 | Path or data for the user's digital signature image.                                                                   |
+| 26  | remember_token    | VARCHAR(100) | YES      | —                 | Laravel session remember-me token.                                                                                     |
+| 27  | deleted_at        | TIMESTAMP    | YES      | —                 | Soft-delete timestamp. NULL means the record is active.                                                                |
+| 28  | created_at        | TIMESTAMP    | YES      | —                 | Record creation timestamp.                                                                                             |
+| 29  | updated_at        | TIMESTAMP    | YES      | —                 | Record last-updated timestamp.                                                                                         |
+
+---
+
+#### password_reset_tokens
+
+**Model:** (Laravel built-in)
+**Description:** Stores one-time password reset tokens issued to users who request a password reset via email.
+
+| #   | Column Name | Data Type         | Nullable | Foreign Key | Description                                                                |
+| --- | ----------- | ----------------- | -------- | ----------- | -------------------------------------------------------------------------- |
+| 1   | email       | VARCHAR(255) (PK) | NO       | —           | Email address of the user requesting the reset. Serves as the primary key. |
+| 2   | token       | VARCHAR(255)      | NO       | —           | Hashed reset token sent to the user's email.                               |
+| 3   | created_at  | TIMESTAMP         | YES      | —           | Timestamp when the reset token was generated.                              |
+
+---
+
+#### personal_access_tokens
+
+**Model:** (Laravel Sanctum)
+**Description:** Manages API personal access tokens for authenticated API consumers (Laravel Sanctum). Supports polymorphic token ownership.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key | Description                                                   |
+| --- | -------------- | ------------ | -------- | ----------- | ------------------------------------------------------------- |
+| 1   | id             | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                |
+| 2   | tokenable_type | VARCHAR(255) | NO       | —           | Morph type of the token owner model (e.g., App\Models\User).  |
+| 3   | tokenable_id   | BIGINT       | NO       | —           | ID of the token owner record.                                 |
+| 4   | name           | VARCHAR(255) | NO       | —           | Human-readable name for the token (e.g., "Mobile App Token"). |
+| 5   | token          | VARCHAR(64)  | NO       | —           | Hashed token string. Unique.                                  |
+| 6   | abilities      | TEXT         | YES      | —           | JSON-encoded list of token abilities/scopes.                  |
+| 7   | last_used_at   | TIMESTAMP    | YES      | —           | Timestamp of the most recent API request using this token.    |
+| 8   | expires_at     | TIMESTAMP    | YES      | —           | Token expiry timestamp. NULL means no expiry.                 |
+| 9   | created_at     | TIMESTAMP    | YES      | —           | Record creation timestamp.                                    |
+| 10  | updated_at     | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                |
+
+---
+
+### Roles & Permissions (Spatie)
+
+#### permissions
+
+**Model:** BarangayRole / Spatie
+**Description:** Defines granular permissions within the system (Spatie Laravel Permission). Guard-scoped to support multiple authentication drivers.
+
+| #   | Column Name | Data Type    | Nullable | Foreign Key | Description                                                           |
+| --- | ----------- | ------------ | -------- | ----------- | --------------------------------------------------------------------- |
+| 1   | id          | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                        |
+| 2   | name        | VARCHAR(255) | NO       | —           | Permission name (e.g., "edit documents"). Unique per guard.           |
+| 3   | guard_name  | VARCHAR(255) | NO       | —           | Authentication guard this permission belongs to (e.g., "web", "api"). |
+| 4   | created_at  | TIMESTAMP    | YES      | —           | Record creation timestamp.                                            |
+| 5   | updated_at  | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                        |
+
+---
+
+#### roles
+
+**Model:** BarangayRole / Spatie
+**Description:** Defines roles such as Captain, Secretary, Kagawad, Admin, and Super Admin. Referenced by barangay_terms.position_id to record which official role a term holder occupies.
+
+| #   | Column Name | Data Type    | Nullable | Foreign Key | Description                                                        |
+| --- | ----------- | ------------ | -------- | ----------- | ------------------------------------------------------------------ |
+| 1   | id          | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                     |
+| 2   | name        | VARCHAR(255) | NO       | —           | Role name (e.g., "Captain", "Kagawad", "Admin"). Unique per guard. |
+| 3   | guard_name  | VARCHAR(255) | NO       | —           | Authentication guard scope for this role.                          |
+| 4   | created_at  | TIMESTAMP    | YES      | —           | Record creation timestamp.                                         |
+| 5   | updated_at  | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                     |
+
+---
+
+#### model_has_roles
+
+**Model:** (Spatie pivot)
+**Description:** Pivot table assigning roles to models (typically users). Enables polymorphic role assignments across different model types.
+
+| #   | Column Name | Data Type    | Nullable | Foreign Key | Description                                               |
+| --- | ----------- | ------------ | -------- | ----------- | --------------------------------------------------------- |
+| 1   | role_id     | BIGINT (FK)  | NO       | roles.id    | FK to the assigned role.                                  |
+| 2   | model_type  | VARCHAR(255) | NO       | —           | Fully-qualified model class name (e.g., App\Models\User). |
+| 3   | model_id    | BIGINT       | NO       | —           | ID of the model instance receiving the role.              |
+
+---
+
+#### model_has_permissions
+
+**Model:** (Spatie pivot)
+**Description:** Pivot table for direct permission assignments to models (bypassing roles). Allows fine-grained per-user permission overrides.
+
+| #   | Column Name   | Data Type    | Nullable | Foreign Key    | Description                                        |
+| --- | ------------- | ------------ | -------- | -------------- | -------------------------------------------------- |
+| 1   | permission_id | BIGINT (FK)  | NO       | permissions.id | FK to the assigned permission.                     |
+| 2   | model_type    | VARCHAR(255) | NO       | —              | Fully-qualified model class name.                  |
+| 3   | model_id      | BIGINT       | NO       | —              | ID of the model instance receiving the permission. |
+
+---
+
+#### role_has_permissions
+
+**Model:** (Spatie pivot)
+**Description:** Pivot table linking roles to their assigned permissions. A role can have many permissions; a permission can belong to many roles.
+
+| #   | Column Name   | Data Type   | Nullable | Foreign Key    | Description           |
+| --- | ------------- | ----------- | -------- | -------------- | --------------------- |
+| 1   | permission_id | BIGINT (FK) | NO       | permissions.id | FK to the permission. |
+| 2   | role_id       | BIGINT (FK) | NO       | roles.id       | FK to the role.       |
+
+---
+
+### Barangay Governance
+
+#### barangay_terms
+
+**Model:** BarangayTerm
+**Description:** Records the official tenure of a barangay official. Each row represents one term of one official in one barangay. The position_id references the Spatie roles table. On creation, the linked user is automatically assigned the corresponding role.
+
+| #   | Column Name | Data Type   | Nullable | Foreign Key  | Description                                                                                                          |
+| --- | ----------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| 1   | id          | BIGINT (PK) | NO       | —            | Auto-incrementing primary key.                                                                                       |
+| 2   | user_id     | BIGINT (FK) | NO       | users.id     | FK to users.id. The official serving this term.                                                                      |
+| 3   | barangay_id | BIGINT (FK) | NO       | barangays.id | FK to barangays.id. The barangay this term is associated with.                                                       |
+| 4   | position_id | BIGINT (FK) | NO       | roles.id     | FK to roles.id. The official position held (e.g., Captain, Secretary, Kagawad). Constrained with RESTRICT on delete. |
+| 5   | started_at  | TIMESTAMP   | NO       | —            | Date and time the term began. Defaults to current timestamp.                                                         |
+| 6   | ended_at    | TIMESTAMP   | YES      | —            | Date and time the term ended. NULL indicates the term is currently active.                                           |
+| 7   | created_at  | TIMESTAMP   | YES      | —            | Record creation timestamp.                                                                                           |
+| 8   | updated_at  | TIMESTAMP   | YES      | —            | Record last-updated timestamp.                                                                                       |
+
+---
+
+#### delegations
+
+**Model:** Delegation
+**Description:** Records signing authority delegations between barangay officials. A granting official (e.g., Captain) can delegate document-signing rights to another official for a specified period.
+
+| #   | Column Name      | Data Type   | Nullable | Foreign Key       | Description                                                                     |
+| --- | ---------------- | ----------- | -------- | ----------------- | ------------------------------------------------------------------------------- |
+| 1   | id               | BIGINT (PK) | NO       | —                 | Auto-incrementing primary key.                                                  |
+| 2   | granter_term_id  | BIGINT (FK) | NO       | barangay_terms.id | FK to barangay_terms.id. The term of the official granting the delegation.      |
+| 3   | delegate_term_id | BIGINT (FK) | NO       | barangay_terms.id | FK to barangay_terms.id. The term of the official receiving the delegation.     |
+| 4   | expires_at       | TIMESTAMP   | YES      | —                 | Expiry timestamp for the delegation. NULL means the delegation does not expire. |
+| 5   | created_at       | TIMESTAMP   | YES      | —                 | Record creation timestamp.                                                      |
+| 6   | updated_at       | TIMESTAMP   | YES      | —                 | Record last-updated timestamp.                                                  |
+
+---
+
+### Housing & Households
+
+#### houses
+
+**Model:** House
+**Description:** Represents a physical dwelling unit within a barangay. A house can contain one or more households.
+
+| #   | Column Name  | Data Type    | Nullable | Foreign Key  | Description                                                   |
+| --- | ------------ | ------------ | -------- | ------------ | ------------------------------------------------------------- |
+| 1   | id           | BIGINT (PK)  | NO       | —            | Auto-incrementing primary key.                                |
+| 2   | barangay_id  | BIGINT (FK)  | NO       | barangays.id | FK to barangays.id. The barangay where this house is located. |
+| 3   | housing_unit | VARCHAR(255) | NO       | —            | Unit number or house number identifier.                       |
+| 4   | street       | VARCHAR(255) | NO       | —            | Street name where the house is located.                       |
+| 5   | subdivision  | VARCHAR(255) | YES      | —            | Subdivision or village name. NULL if not in a subdivision.    |
+| 6   | created_at   | TIMESTAMP    | YES      | —            | Record creation timestamp.                                    |
+| 7   | updated_at   | TIMESTAMP    | YES      | —            | Record last-updated timestamp.                                |
+
+---
+
+#### households
+
+**Model:** Household
+**Description:** Represents a household unit within a house. Multiple households can occupy a single house. Tracks financial data such as income and utility expenses.
+
+| #   | Column Name             | Data Type     | Nullable | Foreign Key | Description                                                                                                                            |
+| --- | ----------------------- | ------------- | -------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | id                      | BIGINT (PK)   | NO       | —           | Auto-incrementing primary key.                                                                                                         |
+| 2   | house_id                | BIGINT (FK)   | NO       | houses.id   | FK to houses.id. The physical house this household occupies. Cascades on delete.                                                       |
+| 3   | household_head_id       | BIGINT        | YES      | —           | References the household_member_profiles.id of the household head. No FK constraint enforced at DB level to avoid circular dependency. |
+| 4   | ownership               | VARCHAR(255)  | NO       | —           | Ownership status of the household (e.g., Owned, Rented).                                                                               |
+| 5   | monthly_utility_expense | DECIMAL(10,2) | YES      | —           | Average monthly utility expenses (electricity, water, etc.).                                                                           |
+| 6   | total_income            | DECIMAL(12,2) | YES      | —           | Combined total monthly income of all household members.                                                                                |
+| 7   | expires_at              | TIMESTAMP     | YES      | —           | Timestamp when the household dissolves or becomes inactive. NULL if still active.                                                      |
+| 8   | created_at              | TIMESTAMP     | YES      | —           | Record creation timestamp.                                                                                                             |
+| 9   | updated_at              | TIMESTAMP     | YES      | —           | Record last-updated timestamp.                                                                                                         |
+
+---
+
+#### household_member_profiles
+
+**Model:** HouseholdMemberProfile
+**Description:** Represents the membership profile of a user within a specific household. Tracks role, income contribution, presence status, and membership duration. A user may have profiles in multiple households.
+
+| #   | Column Name           | Data Type     | Nullable | Foreign Key   | Description                                                                             |
+| --- | --------------------- | ------------- | -------- | ------------- | --------------------------------------------------------------------------------------- |
+| 1   | id                    | BIGINT (PK)   | NO       | —             | Auto-incrementing primary key.                                                          |
+| 2   | user_id               | BIGINT (FK)   | NO       | users.id      | FK to users.id. The resident this profile belongs to. Cascades on delete.               |
+| 3   | household_id          | BIGINT (FK)   | NO       | households.id | FK to households.id. The household this profile is associated with. Cascades on delete. |
+| 4   | role                  | VARCHAR(255)  | NO       | —             | Role within the household (e.g., Head, Member).                                         |
+| 5   | membership_type       | VARCHAR(255)  | NO       | —             | Type of membership (e.g., Resident, Boarder, Outsider).                                 |
+| 6   | presence_status       | VARCHAR(255)  | NO       | —             | Current physical presence status (e.g., Present, OFW, Deceased).                        |
+| 7   | economic_contribution | VARCHAR(255)  | YES      | —             | Description of the member's economic contribution to the household.                     |
+| 8   | monthly_income        | DECIMAL(10,2) | YES      | —             | Member's personal monthly income.                                                       |
+| 9   | started_at            | TIMESTAMP     | NO       | —             | Timestamp when the member joined the household. Defaults to current timestamp.          |
+| 10  | ended_at              | TIMESTAMP     | YES      | —             | Timestamp when the member left the household. NULL if currently active.                 |
+| 11  | created_at            | TIMESTAMP     | YES      | —             | Record creation timestamp.                                                              |
+| 12  | updated_at            | TIMESTAMP     | YES      | —             | Record last-updated timestamp.                                                          |
+
+---
+
+#### families
+
+**Model:** Family
+**Description:** Represents a family unit, optionally linked to a household and barangay. Tracks parental relationships. A family can have multiple member users.
+
+| #   | Column Name  | Data Type    | Nullable | Foreign Key   | Description                                                                                      |
+| --- | ------------ | ------------ | -------- | ------------- | ------------------------------------------------------------------------------------------------ |
+| 1   | id           | BIGINT (PK)  | NO       | —             | Auto-incrementing primary key.                                                                   |
+| 2   | family_name  | VARCHAR(255) | NO       | —             | The family surname or name. Exposed as the name accessor in the model.                           |
+| 3   | household_id | BIGINT (FK)  | YES      | households.id | FK to households.id. The household this family belongs to. Set to NULL on household deletion.    |
+| 4   | barangay_id  | BIGINT (FK)  | YES      | barangays.id  | FK to barangays.id. The barangay this family is registered in. Set to NULL on barangay deletion. |
+| 5   | father_id    | BIGINT (FK)  | YES      | users.id      | FK to users.id. The father of the family unit. Set to NULL on user deletion.                     |
+| 6   | mother_id    | BIGINT (FK)  | YES      | users.id      | FK to users.id. The mother of the family unit. Set to NULL on user deletion.                     |
+| 7   | created_at   | TIMESTAMP    | YES      | —             | Record creation timestamp.                                                                       |
+| 8   | updated_at   | TIMESTAMP    | YES      | —             | Record last-updated timestamp.                                                                   |
+
+---
+
+#### residency_requests
+
+**Model:** ResidencyRequest
+**Description:** Tracks resident applications to be enrolled in a barangay household. Can represent new household creation or joining an existing household. Includes approval workflow.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key   | Description                                                                                           |
+| --- | ---------------- | ------------ | -------- | ------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | id               | BIGINT (PK)  | NO       | —             | Auto-incrementing primary key.                                                                        |
+| 2   | user_id          | BIGINT (FK)  | NO       | users.id      | FK to users.id. The resident submitting the residency request. Cascades on delete.                    |
+| 3   | barangay_id      | BIGINT (FK)  | NO       | barangays.id  | FK to barangays.id. The barangay the resident is applying to join.                                    |
+| 4   | household_id     | BIGINT (FK)  | YES      | households.id | FK to households.id. Populated when joining an existing household. Set to NULL on household deletion. |
+| 5   | housing_unit     | VARCHAR(255) | YES      | —             | Unit number for new household creation requests.                                                      |
+| 6   | street           | VARCHAR(255) | NO       | —             | Street address for the requested residency location.                                                  |
+| 7   | subdivision      | VARCHAR(255) | YES      | —             | Subdivision name, if applicable.                                                                      |
+| 8   | role             | VARCHAR(255) | NO       | —             | Requested household role (e.g., Head, Member). Defaults to "Head".                                    |
+| 9   | membership_type  | VARCHAR(255) | NO       | —             | Requested membership type (e.g., Primary, Boarder). Defaults to "Primary".                            |
+| 10  | ownership        | VARCHAR(255) | NO       | —             | Ownership claim for the dwelling (e.g., Owned, Rented). Defaults to "Owned".                          |
+| 11  | status           | VARCHAR(255) | NO       | —             | Current status of the request: Pending, Approved, Rejected, or Cancelled. Defaults to "Pending".      |
+| 12  | rejection_reason | TEXT         | YES      | —             | Reason provided by the approver when the request is rejected.                                         |
+| 13  | approver_id      | BIGINT (FK)  | YES      | users.id      | FK to users.id. The official who approved or rejected this request.                                   |
+| 14  | actioned_at      | TIMESTAMP    | YES      | —             | Timestamp when the approver took action on the request.                                               |
+| 15  | created_at       | TIMESTAMP    | YES      | —             | Record creation timestamp.                                                                            |
+| 16  | updated_at       | TIMESTAMP    | YES      | —             | Record last-updated timestamp.                                                                        |
+
+---
+
+### Document System
+
+#### document_type_properties
+
+**Model:** DocumentTypeProperty
+**Description:** Master catalog of document types that the system can process (e.g., Barangay Clearance, Indigency Certificate). Each type references a specific Laravel model class via doc_type_model for polymorphic detail retrieval.
+
+| #   | Column Name    | Data Type     | Nullable | Foreign Key | Description                                                                                                                                                                   |
+| --- | -------------- | ------------- | -------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | id             | BIGINT (PK)   | NO       | —           | Auto-incrementing primary key.                                                                                                                                                |
+| 2   | code           | VARCHAR(255)  | NO       | —           | Short unique code for the document type (e.g., BRGY_CLR for Barangay Clearance).                                                                                              |
+| 3   | name           | VARCHAR(255)  | NO       | —           | Human-readable document type name (e.g., "Barangay Clearance").                                                                                                               |
+| 4   | doc_type_model | VARCHAR(255)  | NO       | —           | The associated Laravel model class name (e.g., "Clearance", "BusinessClearance"). Used by DocumentTransaction::getSpecificDetails() to dynamically resolve the detail record. |
+| 5   | description    | TEXT          | YES      | —           | Descriptive text explaining the purpose or use of this document type.                                                                                                         |
+| 6   | default_fee    | DECIMAL(10,2) | NO       | —           | Default processing fee for this document type. Defaults to 0.00.                                                                                                              |
+| 7   | validity_days  | INT           | YES      | —           | Number of days the issued document remains valid. NULL means no expiry.                                                                                                       |
+| 8   | created_at     | TIMESTAMP     | YES      | —           | Record creation timestamp.                                                                                                                                                    |
+| 9   | updated_at     | TIMESTAMP     | YES      | —           | Record last-updated timestamp.                                                                                                                                                |
+
+---
+
+#### document_requirements_definitions
+
+**Model:** DocumentRequirementsDefinition
+**Description:** Defines reusable requirement types that can be attached to document types (e.g., "Valid ID", "Proof of Billing"). Linked to document types via the document_rules pivot table.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key | Description                                                                         |
+| --- | ---------------- | ------------ | -------- | ----------- | ----------------------------------------------------------------------------------- |
+| 1   | id               | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                                      |
+| 2   | requirement_name | VARCHAR(255) | NO       | —           | Name of the requirement (e.g., "Community Tax Certificate", "Valid Government ID"). |
+| 3   | data_type        | VARCHAR(255) | NO       | —           | Expected data format: FILE, STRING, or BOOLEAN.                                     |
+| 4   | description      | TEXT         | YES      | —           | Additional instructions or details about this requirement.                          |
+| 5   | created_at       | TIMESTAMP    | YES      | —           | Record creation timestamp.                                                          |
+| 6   | updated_at       | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                                      |
+
+---
+
+#### document_transactions
+
+**Model:** DocumentTransaction
+**Description:** Central record for every document request or issuance. Tracks the requester, approver, document type, status, and generated file. Each transaction may have a linked detail record in a document-type-specific table.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key                 | Description                                                                                                                    |
+| --- | ---------------- | ------------ | -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | id               | BIGINT (PK)  | NO       | —                           | Auto-incrementing primary key.                                                                                                 |
+| 2   | approver_id      | BIGINT (FK)  | YES      | barangay_terms.id           | FK to barangay_terms.id. The official term that approved this transaction.                                                     |
+| 3   | on_behalf_of     | BIGINT (FK)  | YES      | barangay_terms.id           | FK to barangay_terms.id. The official term the document is signed on behalf of (e.g., when a Secretary signs for the Captain). |
+| 4   | document_type_id | BIGINT (FK)  | NO       | document_type_properties.id | FK to document_type_properties.id. The type of document requested.                                                             |
+| 5   | signing_capacity | VARCHAR(255) | YES      | —                           | The capacity in which the document was signed (e.g., "By Authority of the Punong Barangay").                                   |
+| 6   | issued_at        | TIMESTAMP    | YES      | —                           | Timestamp when the document was officially issued.                                                                             |
+| 7   | expiry_date      | DATE         | YES      | —                           | Date when the issued document expires.                                                                                         |
+| 8   | status           | VARCHAR(255) | NO       | —                           | Current status of the transaction: pending, issued, or rejected. Defaults to "pending".                                        |
+| 9   | request_origin   | VARCHAR(255) | NO       | —                           | How the request was submitted: "walk-in" or "online".                                                                          |
+| 10  | requester_id     | BIGINT (FK)  | NO       | users.id                    | FK to users.id. The resident who submitted the document request.                                                               |
+| 11  | barangay_id      | BIGINT (FK)  | NO       | barangays.id                | FK to barangays.id. The barangay with jurisdiction over this transaction (matches the requester's barangay).                   |
+| 12  | purpose          | TEXT         | YES      | —                           | Stated purpose for the document request (e.g., "For employment", "For school enrollment").                                     |
+| 13  | rejection_reason | TEXT         | YES      | —                           | Reason provided when the transaction status is rejected.                                                                       |
+| 14  | file_path        | VARCHAR(255) | YES      | —                           | Storage path to the generated document file.                                                                                   |
+| 15  | checksum         | CHAR(64)     | YES      | —                           | SHA-256 hash of the generated document file for integrity verification. Unique.                                                |
+| 16  | download_token   | VARCHAR(255) | YES      | —                           | One-time token for secure temporary download URL generation. Refreshed on each download attempt.                               |
+| 17  | created_at       | TIMESTAMP    | YES      | —                           | Record creation timestamp.                                                                                                     |
+| 18  | updated_at       | TIMESTAMP    | YES      | —                           | Record last-updated timestamp.                                                                                                 |
+
+---
+
+#### transaction_requirements
+
+**Model:** TransactionRequirement
+**Description:** Stores the actual requirement submissions for a specific document transaction. Each row corresponds to one required item submitted by the requester.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key                          | Description                                                                                      |
+| --- | -------------- | ------------ | -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 1   | id             | BIGINT (PK)  | NO       | —                                    | Auto-incrementing primary key.                                                                   |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id             | FK to document_transactions.id. The transaction this requirement belongs to. Cascades on delete. |
+| 3   | requirement_id | BIGINT (FK)  | NO       | document_requirements_definitions.id | FK to document_requirements_definitions.id. The requirement definition being fulfilled.          |
+| 4   | value_text     | TEXT         | YES      | —                                    | Text value submitted for this requirement (e.g., a CTC number like "CTC-12345").                 |
+| 5   | file_path      | VARCHAR(255) | YES      | —                                    | Storage path to the uploaded file for this requirement (e.g., "uploads/ids/user_1.jpg").         |
+| 6   | is_verified    | BOOLEAN      | NO       | —                                    | Whether the submitted requirement has been verified by an official. Defaults to FALSE.           |
+| 7   | created_at     | TIMESTAMP    | YES      | —                                    | Record creation timestamp.                                                                       |
+| 8   | updated_at     | TIMESTAMP    | YES      | —                                    | Record last-updated timestamp.                                                                   |
+
+---
+
+### Document Detail Tables
+
+#### clearances
+
+**Model:** Clearance
+**Description:** Stores additional details specific to a Barangay Clearance request. Linked 1-to-1 with a document_transactions record.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key              | Description                                                 |
+| --- | ---------------- | ------------ | -------- | ------------------------ | ----------------------------------------------------------- |
+| 1   | id               | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                              |
+| 2   | transaction_id   | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.         |
+| 3   | community_tax_id | VARCHAR(255) | YES      | —                        | Community Tax Certificate (cedula) number of the requester. |
+| 4   | created_at       | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                  |
+| 5   | updated_at       | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                              |
+
+---
+
+#### business_clearances
+
+**Model:** BusinessClearance
+**Description:** Stores business-specific details for a Business Clearance request.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key              | Description                                                                  |
+| --- | -------------- | ------------ | -------- | ------------------------ | ---------------------------------------------------------------------------- |
+| 1   | id             | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                                               |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.                          |
+| 3   | business_name  | VARCHAR(255) | NO       | —                        | Registered name of the business.                                             |
+| 4   | business_type  | VARCHAR(255) | NO       | —                        | Type or category of the business.                                            |
+| 5   | ownership      | VARCHAR(255) | NO       | —                        | Ownership structure (e.g., Single Proprietorship, Corporation, Partnership). |
+| 6   | services       | VARCHAR(255) | NO       | —                        | Description of products or services offered by the business.                 |
+| 7   | location       | VARCHAR(255) | NO       | —                        | Physical address or location of the business.                                |
+| 8   | created_at     | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                                   |
+| 9   | updated_at     | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                                               |
+
+---
+
+#### construction_clearances
+
+**Model:** ConstructionClearance
+**Description:** Stores location details for a Construction Clearance request.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key              | Description                                          |
+| --- | -------------- | ------------ | -------- | ------------------------ | ---------------------------------------------------- |
+| 1   | id             | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                       |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.  |
+| 3   | location       | VARCHAR(255) | NO       | —                        | Address or lot description of the construction site. |
+| 4   | created_at     | TIMESTAMP    | YES      | —                        | Record creation timestamp.                           |
+| 5   | updated_at     | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                       |
+
+---
+
+#### tricycle_clearances
+
+**Model:** TricycleClearance
+**Description:** Stores details for a Tricycle Clearance request. Supports ownership transfer scenarios.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key              | Description                                                                                  |
+| --- | ---------------- | ------------ | -------- | ------------------------ | -------------------------------------------------------------------------------------------- |
+| 1   | id               | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                                                               |
+| 2   | transaction_id   | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.                                          |
+| 3   | new_owner_id     | BIGINT       | YES      | —                        | ID of the new owner of the tricycle. No enforced FK to allow external (non-resident) owners. |
+| 4   | requested_for_id | BIGINT       | YES      | —                        | ID of the individual this clearance is being requested for.                                  |
+| 5   | purpose          | VARCHAR(255) | NO       | —                        | Stated purpose of the clearance (e.g., transfer of ownership, renewal).                      |
+| 6   | body_number      | VARCHAR(255) | NO       | —                        | Official body number of the tricycle unit.                                                   |
+| 7   | created_at       | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                                                   |
+| 8   | updated_at       | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                                                               |
+
+---
+
+#### jobseeker_certificates
+
+**Model:** JobseekerCertificate
+**Description:** Detail record for a Jobseeker Certificate. No additional fields beyond the transaction link; requester details are derived from the linked document_transactions record.
+
+| #   | Column Name    | Data Type   | Nullable | Foreign Key              | Description                                         |
+| --- | -------------- | ----------- | -------- | ------------------------ | --------------------------------------------------- |
+| 1   | id             | BIGINT (PK) | NO       | —                        | Auto-incrementing primary key.                      |
+| 2   | transaction_id | BIGINT (FK) | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete. |
+| 3   | created_at     | TIMESTAMP   | YES      | —                        | Record creation timestamp.                          |
+| 4   | updated_at     | TIMESTAMP   | YES      | —                        | Record last-updated timestamp.                      |
+
+---
+
+#### guardianship_certificates
+
+**Model:** GuardianshipCertificate
+**Description:** Stores guardian and address details for a Guardianship Certificate request.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key              | Description                                                                    |
+| --- | -------------- | ------------ | -------- | ------------------------ | ------------------------------------------------------------------------------ |
+| 1   | id             | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                                                 |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.                            |
+| 3   | guardian_id    | VARCHAR(255) | YES      | —                        | Identifier of the guardian. Stored as a string to support external system IDs. |
+| 4   | relationship   | VARCHAR(255) | NO       | —                        | Relationship of the guardian to the ward (e.g., Uncle, Grandparent).           |
+| 5   | address_id     | BIGINT (FK)  | NO       | barangays.id             | FK to barangays.id. Used as the address locator for the guardian's barangay.   |
+| 6   | created_at     | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                                     |
+| 7   | updated_at     | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                                                 |
+
+---
+
+#### indigency_certificates
+
+**Model:** IndigencyCertificate
+**Description:** Stores details for an Indigency Certificate request.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key              | Description                                                                |
+| --- | -------------- | ------------ | -------- | ------------------------ | -------------------------------------------------------------------------- |
+| 1   | id             | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                                             |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.                        |
+| 3   | requested_for  | VARCHAR(255) | NO       | —                        | Full name of the individual the certificate is being requested for.        |
+| 4   | purpose        | VARCHAR(255) | NO       | —                        | Stated purpose for the indigency certificate (e.g., "Medical Assistance"). |
+| 5   | created_at     | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                                 |
+| 6   | updated_at     | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                                             |
+
+---
+
+#### indigencysps_certificates
+
+**Model:** IndigencySPSCertificate
+**Description:** Stores parent and address details for an Indigency Certificate requested through the SPS (Special Purpose System) flow. Table name is indigencysps_certificates.
+
+| #   | Column Name    | Data Type    | Nullable | Foreign Key              | Description                                              |
+| --- | -------------- | ------------ | -------- | ------------------------ | -------------------------------------------------------- |
+| 1   | id             | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                           |
+| 2   | transaction_id | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.      |
+| 3   | father         | VARCHAR(255) | NO       | —                        | Full name of the father as stated in the certificate.    |
+| 4   | mother         | VARCHAR(255) | NO       | —                        | Full name of the mother as stated in the certificate.    |
+| 5   | address_id     | BIGINT (FK)  | NO       | barangays.id             | FK to barangays.id. The barangay address of the subject. |
+| 6   | created_at     | TIMESTAMP    | YES      | —                        | Record creation timestamp.                               |
+| 7   | updated_at     | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                           |
+
+---
+
+#### residency_certificates
+
+**Model:** ResidencyCertificate
+**Description:** Stores details for a Certificate of Residency request.
+
+| #   | Column Name         | Data Type    | Nullable | Foreign Key              | Description                                                                              |
+| --- | ------------------- | ------------ | -------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| 1   | id                  | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                                                           |
+| 2   | transaction_id      | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.                                      |
+| 3   | requested_for       | VARCHAR(255) | NO       | —                        | Full name of the individual the certificate is being requested for.                      |
+| 4   | length_of_residence | INT          | NO       | —                        | Duration of residency (in years or months; interpretation handled in application logic). |
+| 5   | created_at          | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                                               |
+| 6   | updated_at          | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                                                           |
+
+---
+
+#### solo_parent_certificates
+
+**Model:** SoloParentCertificate
+**Description:** Stores details for a Solo Parent Certificate request.
+
+| #   | Column Name      | Data Type    | Nullable | Foreign Key              | Description                                                  |
+| --- | ---------------- | ------------ | -------- | ------------------------ | ------------------------------------------------------------ |
+| 1   | id               | BIGINT (PK)  | NO       | —                        | Auto-incrementing primary key.                               |
+| 2   | transaction_id   | BIGINT (FK)  | NO       | document_transactions.id | FK to document_transactions.id. Cascades on delete.          |
+| 3   | solo_parent_name | VARCHAR(255) | NO       | —                        | Full name of the solo parent.                                |
+| 4   | no_of_child      | INT          | NO       | —                        | Number of dependent children.                                |
+| 5   | address_id       | BIGINT (FK)  | NO       | barangays.id             | FK to barangays.id. The barangay address of the solo parent. |
+| 6   | created_at       | TIMESTAMP    | YES      | —                        | Record creation timestamp.                                   |
+| 7   | updated_at       | TIMESTAMP    | YES      | —                        | Record last-updated timestamp.                               |
+
+---
+
+### System & Infrastructure
+
+#### notifications
+
+**Model:** (Laravel built-in)
+**Description:** Stores database notifications sent to system users. Supports polymorphic notifiable models (e.g., users). Used for document request notifications.
+
+| #   | Column Name     | Data Type    | Nullable | Foreign Key | Description                                                                                |
+| --- | --------------- | ------------ | -------- | ----------- | ------------------------------------------------------------------------------------------ |
+| 1   | id              | UUID (PK)    | NO       | —           | UUID primary key.                                                                          |
+| 2   | type            | VARCHAR(255) | NO       | —           | Fully-qualified notification class name (e.g., App\Notifications\DocumentRequestReceived). |
+| 3   | notifiable_type | VARCHAR(255) | NO       | —           | Morph type of the notification recipient model.                                            |
+| 4   | notifiable_id   | BIGINT       | NO       | —           | ID of the notification recipient.                                                          |
+| 5   | data            | TEXT         | NO       | —           | JSON-encoded notification payload.                                                         |
+| 6   | read_at         | TIMESTAMP    | YES      | —           | Timestamp when the notification was read. NULL means unread.                               |
+| 7   | created_at      | TIMESTAMP    | YES      | —           | Record creation timestamp.                                                                 |
+| 8   | updated_at      | TIMESTAMP    | YES      | —           | Record last-updated timestamp.                                                             |
+
+---
+
+#### jobs
+
+**Model:** (Laravel Queue)
+**Description:** Laravel queue jobs table. Stores pending background jobs for async processing (e.g., email sending, document generation).
+
+| #   | Column Name  | Data Type        | Nullable | Foreign Key | Description                                                                     |
+| --- | ------------ | ---------------- | -------- | ----------- | ------------------------------------------------------------------------------- |
+| 1   | id           | BIGINT (PK)      | NO       | —           | Auto-incrementing primary key.                                                  |
+| 2   | queue        | VARCHAR(255)     | NO       | —           | Queue name the job belongs to. Indexed.                                         |
+| 3   | payload      | LONGTEXT         | NO       | —           | JSON-serialized job payload including the job class and its data.               |
+| 4   | attempts     | TINYINT UNSIGNED | NO       | —           | Number of times the job has been attempted.                                     |
+| 5   | reserved_at  | INT UNSIGNED     | YES      | —           | Unix timestamp when the job was reserved by a worker. NULL if not yet reserved. |
+| 6   | available_at | INT UNSIGNED     | NO       | —           | Unix timestamp when the job becomes available for processing.                   |
+| 7   | created_at   | INT UNSIGNED     | NO       | —           | Unix timestamp when the job was created.                                        |
+
+---
+
+#### failed_jobs
+
+**Model:** (Laravel Queue)
+**Description:** Stores jobs that failed after all retry attempts. Useful for debugging and manual reprocessing.
+
+| #   | Column Name | Data Type    | Nullable | Foreign Key | Description                                                         |
+| --- | ----------- | ------------ | -------- | ----------- | ------------------------------------------------------------------- |
+| 1   | id          | BIGINT (PK)  | NO       | —           | Auto-incrementing primary key.                                      |
+| 2   | uuid        | VARCHAR(255) | NO       | —           | Unique identifier for the failed job. Unique.                       |
+| 3   | connection  | TEXT         | NO       | —           | Connection name used by the failed job (e.g., "database", "redis"). |
+| 4   | queue       | TEXT         | NO       | —           | Queue name the failed job belonged to.                              |
+| 5   | payload     | LONGTEXT     | NO       | —           | Full JSON payload of the failed job.                                |
+| 6   | exception   | LONGTEXT     | NO       | —           | Full exception stack trace that caused the job to fail.             |
+| 7   | failed_at   | TIMESTAMP    | NO       | —           | Timestamp when the job failed. Defaults to current timestamp.       |
+
+---
+
+#### telescope_entries
+
+**Model:** (Laravel Telescope)
+**Description:** Stores Laravel Telescope debug/monitoring entries (requests, queries, jobs, exceptions, etc.).
+
+| #   | Column Name             | Data Type    | Nullable | Foreign Key | Description                                                                    |
+| --- | ----------------------- | ------------ | -------- | ----------- | ------------------------------------------------------------------------------ |
+| 1   | sequence                | BIGINT (PK)  | NO       | —           | Auto-incrementing sequence number.                                             |
+| 2   | uuid                    | UUID         | NO       | —           | Unique identifier for the entry. Unique.                                       |
+| 3   | batch_id                | UUID         | NO       | —           | Groups related entries from the same request/job batch.                        |
+| 4   | family_hash             | VARCHAR(255) | YES      | —           | Hash used to group similar entries (e.g., identical exceptions).               |
+| 5   | should_display_on_index | BOOLEAN      | NO       | —           | Whether the entry should appear on the Telescope index page. Defaults to TRUE. |
+| 6   | type                    | VARCHAR(20)  | NO       | —           | Entry type (e.g., request, query, job, exception, log).                        |
+| 7   | content                 | LONGTEXT     | NO       | —           | JSON-encoded content specific to the entry type.                               |
+| 8   | created_at              | DATETIME     | YES      | —           | Timestamp when the entry was recorded.                                         |
+
+---
+
+#### telescope_entries_tags
+
+**Model:** (Laravel Telescope)
+**Description:** Stores searchable tags associated with Telescope entries. Enables filtering by authenticated user, model, or custom tag.
+
+| #   | Column Name | Data Type    | Nullable | Foreign Key            | Description                                       |
+| --- | ----------- | ------------ | -------- | ---------------------- | ------------------------------------------------- |
+| 1   | entry_uuid  | UUID (FK)    | NO       | telescope_entries.uuid | FK to telescope_entries.uuid. Cascades on delete. |
+| 2   | tag         | VARCHAR(255) | NO       | —                      | Tag string (e.g., "Auth:1", "App\Models\User:1"). |
+
+---
+
+#### telescope_monitoring
+
+**Model:** (Laravel Telescope)
+**Description:** Stores tags that Telescope actively monitors. Used to flag specific tags for detailed tracking.
+
+| #   | Column Name | Data Type         | Nullable | Foreign Key | Description                                         |
+| --- | ----------- | ----------------- | -------- | ----------- | --------------------------------------------------- |
+| 1   | tag         | VARCHAR(255) (PK) | NO       | —           | The tag being monitored. Serves as the primary key. |
+
 ---
 
 ## 8. Key Design Decisions
