@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('name')->unique();
             $table->integer('district');
             $table->string('zip_code', 4);
+            $table->string('municity_code');
             $table->timestamps();
         });
     }

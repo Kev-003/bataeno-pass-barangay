@@ -16,10 +16,6 @@ return new class extends Migration {
         // Add eGovPH codes to municipalities table
         Schema::table('municipalities', function (Blueprint $table) {
             $table->string('municity_code', 20)->unique()->nullable()->after('id');
-            $table->string('province_code', 20)->nullable()->after('municity_code');
-            $table->string('province_name')->nullable()->after('province_code');
-            $table->string('region_code', 20)->nullable()->after('province_name');
-            $table->string('region_name')->nullable()->after('region_code');
 
             // Index for fast lookups
             $table->index('municity_code');
