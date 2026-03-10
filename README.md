@@ -1,3 +1,8 @@
+<p align="center"><x-application-logo class="block h-40 w-40 fill-current text-gray-800" /></p>
+<h1 align="center" class="text-6xl md:text-8xl font-bevan text-white">
+                Bataeño Pass
+            </h1>
+
 # Barangay-Level Implementation of Bataeño Pass
 
 ## Final Project Documentation
