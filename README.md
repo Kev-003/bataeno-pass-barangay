@@ -1,9 +1,9 @@
-<p align="center"><img src="public/bataeno_pass_logo.svg" width="400" alt="Bataeno Pass Logo"></p>
-<h1 align="center" class="text-6xl md:text-8xl font-bevan text-white">
-                Bataeno Pass
+<p align="center"><img src="public/bataeno_pass_logo.svg" width="200" alt="Bataeño Pass Logo"></p>
+<h1 align="center" class="text-8xl text-white">
+                Bataeño Pass
             </h1>
 
-# Barangay-Level Implementation of Bataeno Pass
+# Barangay-Level Implementation of Bataeño Pass
 
 ## Final Project Documentation
 
