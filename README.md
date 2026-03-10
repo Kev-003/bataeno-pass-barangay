@@ -1,9 +1,9 @@
-<p align="center"><x-application-logo class="block h-40 w-40 fill-current text-gray-800" /></p>
+<p align="center"><img src="public/bataeno_pass_logo.svg" width="400" alt="Bataeno Pass Logo"></p>
 <h1 align="center" class="text-6xl md:text-8xl font-bevan text-white">
-                Bataeño Pass
+                Bataeno Pass
             </h1>
 
-# Barangay-Level Implementation of Bataeño Pass
+# Barangay-Level Implementation of Bataeno Pass
 
 ## Final Project Documentation
 
@@ -11,13 +11,18 @@
 
 - Kevern Joebert C. Angeles
 - Russel Matthew F. Santos
-  **Organization:** Provincial Government of Bataan — PITO  
-  **Internship Period:** February 2, 2026 – March 10, 2026  
-  **Technology Officers:**
+
+**Organization:** Provincial Government of Bataan — PITO
+
+**Internship Period:** February 2, 2026 – March 10, 2026
+
+**Technology Officers:**
+
 - Mr. Paolo Nuestro
 - Mr. Nixon Somoza
 - Mr. Bryan Gonzales
-  **ERD Reference:** https://dbdiagram.io/d/ERDBrgy-697aaeb0bd82f5fce2f3aac1
+
+**ERD Reference:** https://dbdiagram.io/d/ERDBrgy-697aaeb0bd82f5fce2f3aac1
 
 ---
 
