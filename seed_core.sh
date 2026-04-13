@@ -46,6 +46,9 @@ php artisan db:seed --class=BarangayTermSeeder
 echo "10: Building Lineage (family_id, parents, deceased)..."
 php artisan db:seed --class=LineageSeeder
 
+echo "11: Seeding City Admins and Admins..."
+php artisan db:seed --class=CityAdminAndAdminSeeder
+
 echo "==============================="
 echo "✅ Fresh Migration and Seeding Complete!"
 echo "==============================="

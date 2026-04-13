@@ -15,8 +15,11 @@ return new class extends Migration {
             $table->string('name')->unique();
             $table->integer('district');
             $table->string('zip_code', 4);
-            $table->string('municity_code');
+            $table->string('municity_code')->unique()->nullable();
             $table->timestamps();
+
+            // Index for fast lookups
+            $table->index('municity_code');
         });
     }
 

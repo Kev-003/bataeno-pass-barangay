@@ -17,6 +17,8 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
 
 //Models
 use App\Models\Barangay;
@@ -38,6 +40,7 @@ class OfficialPanelProvider extends PanelProvider
                     ['attributes' => 'h-12 w-12']
                 )
             )
+            
             ->topNavigation()
             ->login()
             ->userMenuItems([
@@ -49,6 +52,10 @@ class OfficialPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn (): string => Blade::render('<div class="hidden md:block mr-4"><x-demo-mode-switcher /></div>'),
+            )
             ->tenant(Barangay::class, slugAttribute: 'barangay_code')
             ->discoverResources(in: app_path('Filament/Official/Resources'), for: 'App\\Filament\\Official\\Resources')
             ->discoverPages(in: app_path('Filament/Official/Pages'), for: 'App\\Filament\\Official\\Pages')

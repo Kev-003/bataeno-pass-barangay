@@ -55,7 +55,7 @@ class HouseSeeder extends Seeder
                 'housing_unit' => fake()->optional(0.3)->numerify('Unit ##'),
                 'street' => $streets[array_rand($streets)],
                 'subdivision' => $subdivisions[array_rand($subdivisions)],
-                'barangay' => 'Santo Domingo',
+
             ]);
         }
 

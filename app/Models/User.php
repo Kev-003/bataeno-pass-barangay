@@ -232,17 +232,22 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
      * Get the Municipality the user's active term barangay belongs to.
      */
     public function getActiveMunicipality(): ?Municipality
-    {
-        $termBarangayId = $this->activeTerm?->barangay_id;
+{
+    $termBarangayId = $this->activeTerm?->barangay_id;
 
-        if (!$termBarangayId) {
-            return null;
-        }
-
+    if ($termBarangayId) {
         return Barangay::with('municipality')
             ->find($termBarangayId)
                 ?->municipality;
     }
+
+    // Fallback for City Admin — direct municity_id on the user
+    if ($this->municity_id) {
+        return Municipality::find($this->municity_id);
+    }
+
+    return null;
+}
 
     /**
      * Get the municity_code of the user's active municipality.

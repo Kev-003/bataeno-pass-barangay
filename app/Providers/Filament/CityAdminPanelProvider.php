@@ -17,6 +17,8 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
 
 //Models
 use App\Models\Barangay;
@@ -47,12 +49,17 @@ class CityAdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Green,
             ])
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn (): string => Blade::render('<div class="hidden md:block mr-4"><x-demo-mode-switcher /></div>'),
+            )
             ->tenant(model: Municipality::class, slugAttribute: 'municity_code')
             ->discoverResources(in: app_path('Filament/CityAdmin/Resources'), for: 'App\\Filament\\CityAdmin\\Resources')
             ->discoverPages(in: app_path('Filament/CityAdmin/Pages'), for: 'App\\Filament\\CityAdmin\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
+            
             ->discoverWidgets(in: app_path('Filament/CityAdmin/Widgets'), for: 'App\\Filament\\CityAdmin\\Widgets')
             ->widgets([
                 \App\Filament\Official\Widgets\WelcomeOfficial::class,

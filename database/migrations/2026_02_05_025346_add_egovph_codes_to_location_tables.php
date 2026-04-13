@@ -13,13 +13,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        // Add eGovPH codes to municipalities table
-        Schema::table('municipalities', function (Blueprint $table) {
-            $table->string('municity_code', 20)->unique()->nullable()->after('id');
 
-            // Index for fast lookups
-            $table->index('municity_code');
-        });
 
         // Add eGovPH codes to barangays table
         Schema::table('barangays', function (Blueprint $table) {
@@ -30,7 +24,7 @@ return new class extends Migration {
 
             // Index for fast lookups
             $table->index('barangay_code');
-            $table->index('municity_code');
+
         });
     }
 

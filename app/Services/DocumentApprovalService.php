@@ -131,6 +131,10 @@ class DocumentApprovalService
         }
 
         Browsershot::html($html)
+            ->setNodeBinary('C:\Program Files\nodejs\node.exe')
+            ->setChromePath('C:\Program Files\Google\Chrome\Application\chrome.exe')
+            ->setIncludePath('$PATH;C:\Program Files\nodejs')
+            ->noSandbox()
             ->margins(10, 10, 10, 10)
             ->showBackground()
             ->save($fullPath);

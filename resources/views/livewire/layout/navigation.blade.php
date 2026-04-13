@@ -34,6 +34,11 @@ new class extends Component {
                         </div>
                     @endif
                 </div>
+
+                <!-- Demo Panel Switcher -->
+                <div class="hidden sm:flex items-center ml-4">
+                    <x-demo-mode-switcher />
+                </div>
                 @auth
                     <!-- Navigation Links -->
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">

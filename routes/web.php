@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Storage;
 
 // Controllers
 use App\Http\Controllers\Auth\BataenoAuthController;
+use App\Http\Controllers\Auth\DemoLoginController;
 use App\Http\Controllers\ResidentLookupController;
 use App\Http\Controllers\DocumentRequestController;
 // Livewire Components
@@ -19,6 +20,12 @@ use App\Livewire\Officials\DocumentApprovalProcess;
 use App\Livewire\Officials\Profile;
 use App\Livewire\Officials\OfficialManagement;
 use App\Livewire\Officials\WalkInRequest;
+
+// Demo Login Routes for Portfolio
+Route::get('/demo/resident', [DemoLoginController::class, 'loginAsResident'])->name('demo.resident');
+Route::get('/demo/official', [DemoLoginController::class, 'loginAsOfficial'])->name('demo.official');
+Route::get('/demo/city-admin', [DemoLoginController::class, 'loginAsCityAdmin'])->name('demo.city.admin');
+Route::get('/demo/admin', [DemoLoginController::class, 'loginAsAdmin'])->name('demo.admin');
 
 Route::view('/', 'welcome');
 
