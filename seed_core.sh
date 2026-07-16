@@ -24,10 +24,6 @@ php artisan db:seed --class=RolesAndPermissionsSeeder
 echo "4: Seeding Document Type Properties..."
 php artisan db:seed --class=DocumentTypePropertiesSeeder
 
-echo "==============================="
-echo "Testing Data [REMOVE ON PRODUCTION]"
-echo "==============================="
-
 echo "5: Seeding Houses..."
 php artisan db:seed --class=HouseSeeder
 
